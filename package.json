@@ -1,0 +1,22 @@
+{
+  "name": "sahel-guard",
+  "version": "1.0.0",
+  "description": "Système de Sécurité Réseau Décentralisé",
+  "main": "backend/server.js",
+  "scripts": {
+    "start": "node backend/server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "engines": {
+    "node": "18.x"
+  },
+  "author": "Layes",
+  "license": "ISC",
+  "dependencies": {
+    "@hashgraph/sdk": "^2.72.0",
+    "axios": "^1.12.2",
+    "dotenv": "^17.2.2",
+    "express": "^5.1.0",
+    "socket.io": "^4.8.1"
+  }
+}

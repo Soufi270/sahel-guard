@@ -1,0 +1,305 @@
+const express = require('express');
+const http = require('http');
+const fs = require('fs');
+const socketIo = require('socket.io');
+const path = require('path');
+const { sendHCSMessage, getTopicId } = require("./hedera-config");
+const { getAnomalyDetector, checkBusinessRules } = require('./ai-detection-simple');
+const { getSmsService } = require('./sms-service');
+const { getTokenService } = require("./token-service-simple");
+require('dotenv').config();
+
+const app = express();
+const server = http.createServer(app);
+const io = socketIo(server);
+
+const PORT = process.env.PORT || 3000;
+
+// --- Gestion des Paramètres ---
+const SETTINGS_FILE_PATH = path.join(__dirname, 'settings.json');
+let settings = {
+    smsEnabled: true,
+    alertPhoneNumbers: process.env.ALERT_PHONE_NUMBERS ? process.env.ALERT_PHONE_NUMBERS.split(',') : [],
+    aiAnomalyThreshold: 0.9,
+    theme: 'dark'
+};
+
+function loadSettings() {
+    try {
+        if (fs.existsSync(SETTINGS_FILE_PATH)) {
+            const data = fs.readFileSync(SETTINGS_FILE_PATH, 'utf8');
+            settings = { ...settings, ...JSON.parse(data) };
+            console.log('✅ Paramètres chargés depuis settings.json');
+        } else {
+            saveSettings();
+        }
+    } catch (error) {
+        console.error('❌ Erreur chargement settings.json:', error);
+    }
+}
+
+function saveSettings() {
+    try {
+        fs.writeFileSync(SETTINGS_FILE_PATH, JSON.stringify(settings, null, 2), 'utf8');
+        console.log('💾 Paramètres sauvegardés dans settings.json');
+    } catch (error) {
+        console.error('❌ Erreur sauvegarde settings.json:', error);
+    }
+}
+
+// Variables pour les services
+let anomalyDetector = null;
+let smsService = null;
+let tokenService = null;
+
+// Middleware pour servir les fichiers statiques
+app.use(express.static(path.join(__dirname, '../frontend')));
+app.use(express.json());
+
+// Initialisation de tous les services
+(async function initializeServices() {
+    try {
+        loadSettings();
+        console.log('🔄 Initialisation des services...');
+        
+        anomalyDetector = await getAnomalyDetector();
+        console.log('✅ Détecteur d\'anomalies initialisé');
+        
+        smsService = getSmsService();
+        console.log('✅ Service SMS initialisé');
+        
+        tokenService = getTokenService();
+        console.log('✅ Service Token initialisé');
+        
+        console.log('🚀 Tous les services sont prêts!');
+        
+    } catch (error) {
+        console.error('❌ Erreur initialisation services:', error);
+    }
+})();
+
+// Route pour la page d'accueil
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, '../frontend/index.html'));
+});
+
+// Route pour envoyer une alerte manuellement
+app.post('/api/alert', async (req, res) => {
+    try {
+        const alertData = req.body;
+        
+        // Validation basique des données
+        if (!alertData.type || !alertData.severity) {
+            return res.status(400).json({ 
+                error: "Les champs 'type' et 'severity' sont requis" 
+            });
+        }
+        
+        // Envoi du message à Hedera
+        const result = await sendHCSMessage(alertData);
+        
+        // Diffusion via WebSocket à tous les clients connectés
+        io.emit('new-alert', { ...alertData, id: result.messageId });
+        
+        res.json({ 
+            success: true, 
+            message: "Alerte envoyée avec succès",
+            data: result 
+        });
+    } catch (error) {
+        console.error("Erreur:", error);
+        res.status(500).json({ 
+            error: "Erreur lors de l'envoi de l'alerte",
+            details: error.message 
+        });
+    }
+});
+
+// Route pour l'analyse en temps réel avec IA
+app.post('/api/analyze', async (req, res) => {
+    try {
+        const networkData = req.body;
+        
+        if (!anomalyDetector) {
+            return res.status(503).json({ 
+                error: "Système IA non initialisé" 
+            });
+        }
+
+        const aiResult = await anomalyDetector.detectAnomaly(networkData);
+        
+        // Vérification des règles métier
+        const businessRulesResult = checkBusinessRules(networkData);
+        
+        // Décision finale
+        let finalDecision = {
+            isThreat: aiResult.isAnomaly || businessRulesResult.length > 0,
+            aiAnalysis: aiResult,
+            businessRules: businessRulesResult,
+            timestamp: Date.now(),
+            networkData: networkData
+        };
+
+        // Si menace détectée, envoyer une alerte HCS
+        if (finalDecision.isThreat) {
+            const alertData = {
+                type: 'auto-detected-threat',
+                severity: businessRulesResult.length > 0 ? 
+                         businessRulesResult[0].severity : 
+                         (aiResult.confidence > 90 ? 'high' : 'medium'),
+                source: networkData.sourceIP || 'Inconnue',
+                description: `Menace détectée: ${aiResult.isAnomaly ? 'Anomalie IA' : 'Règle métier'} - ${businessRulesResult.map(r => r.rule).join(', ')}`,
+                confidence: aiResult.confidence, // ...
+                location: 'Mali', // ...
+                aiFeatures: aiResult.features // ...
+            };
+
+            const result = await sendHCSMessage(alertData);
+            io.emit('new-alert', { ...alertData, id: result.messageId });
+
+            // Mettre à jour le statut du capteur sur le front-end
+            if (networkData.sensorId) {
+                io.emit('sensor-status-update', { sensorId: networkData.sensorId, status: 'alert' });
+                setTimeout(() => {
+                    io.emit('sensor-status-update', { sensorId: networkData.sensorId, status: 'active' });
+                }, 30000); // Retour à la normale après 30s
+            }
+
+            // Envoi SMS si activé
+            if (smsService && settings.smsEnabled && alertData.severity !== 'low') {
+                const phoneNumbers = settings.alertPhoneNumbers || [];
+                
+                if (phoneNumbers.length > 0) {
+                    setTimeout(async () => {
+                        try {
+                            const smsResults = await smsService.sendAlertSms(alertData, phoneNumbers);
+                            console.log(`📱 SMS envoyés: ${smsResults.filter(r => r.success).length}/${smsResults.length}`);
+                            io.emit('sms-sent', { alertData, smsResults });
+                        } catch (smsError) {
+                            console.error('❌ Erreur envoi SMS:', smsError);
+                        }
+                    }, 1000);
+                }
+            }
+
+            // Distribution de récompenses token
+            if (tokenService && networkData.sensorId) {
+                setTimeout(async () => {
+                    try {
+                        // Pour la démo, on utilise un compte simulé basé sur le sensorId
+                        const sensorAccountId = `0.0.${1000 + networkData.sensorId}`;
+                        
+                        const rewardResult = await tokenService.rewardAnomalyDetection(
+                            sensorAccountId, 
+                            alertData
+                        );
+                        
+                        if (rewardResult.success) {
+                            console.log(`🎉 Récompense distribuée: ${rewardResult.amount} SAHEL à ${sensorAccountId}`);
+                            // Diffuser via WebSocket
+                            io.emit('reward-distributed', rewardResult);
+                        }
+                    } catch (rewardError) {
+                        console.error('❌ Erreur distribution récompense:', rewardError);
+                    }
+                }, 2000);
+            }
+        }
+
+        res.json(finalDecision);
+
+    } catch (error) {
+        console.error('Erreur analyse:', error);
+        res.status(500).json({ 
+            error: "Erreur lors de l'analyse",
+            details: error.message 
+        });
+    }
+});
+
+// --- Routes pour les Paramètres ---
+app.get('/api/settings', (req, res) => {
+    res.json(settings);
+});
+
+app.post('/api/settings', (req, res) => {
+    settings = { ...settings, ...req.body };
+    if (anomalyDetector) {
+        anomalyDetector.anomalyThreshold = settings.aiAnomalyThreshold;
+    }
+    saveSettings();
+    res.json({ success: true, message: "Paramètres mis à jour." });
+});
+
+// Route pour obtenir des informations sur le topic
+app.get('/api/topic-info', (req, res) => {
+    const topicId = getTopicId();
+    res.json({
+        topicId: topicId ? topicId.toString() : "Non défini",
+        network: "Hedera Testnet",
+        status: topicId ? "Actif" : "Inactif"
+    });
+});
+
+// Route pour les informations token
+app.get('/api/token-info', async (req, res) => {
+    try {
+        const info = tokenService.getTokenInfo();
+        res.json(info);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Route pour vérifier un solde
+app.get('/api/balance/:accountId', async (req, res) => {
+    try {
+        const balance = await tokenService.getAccountBalance(req.params.accountId);
+        res.json(balance);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Route pour distribuer des récompenses manuelles
+app.post('/api/reward', async (req, res) => {
+    try {
+        const { accountId, amount, reason } = req.body;
+        
+        if (!accountId || !amount) {
+            return res.status(400).json({ error: "accountId et amount requis" });
+        }
+
+        const result = await tokenService.distributeReward(accountId, amount, reason || "Récompense manuelle");
+        res.json(result);
+
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Gestion des connexions WebSocket
+io.on('connection', (socket) => {
+    console.log('🔗 Nouveau client connecté:', socket.id);
+    
+    // Envoyer l'ID du topic au nouveau client
+    const topicId = getTopicId();
+    if (topicId) {
+        socket.emit('topic-info', { topicId: topicId.toString() });
+    }
+
+    // Envoyer les infos token si disponible
+    if (tokenService) {
+        socket.emit('token-info', tokenService.getTokenInfo());
+    }
+    
+    socket.on('disconnect', () => {
+        console.log('Client déconnecté:', socket.id);
+    });
+});
+
+// Démarrage du serveur
+server.listen(PORT, () => {
+    console.log(`🚀 Serveur démarré sur http://localhost:${PORT}`);
+    console.log(`📋 Topic ID: ${getTopicId() ? getTopicId().toString() : "Non encore créé"}`);
+});
