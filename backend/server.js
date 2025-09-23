@@ -52,6 +52,7 @@ function saveSettings() {
 let anomalyDetector = null;
 let smsService = null;
 let tokenService = null;
+let isServerReady = false;
 
 // --- Historique pour les nouveaux clients ---
 const MAX_LOG_HISTORY = 20;
@@ -89,8 +90,8 @@ app.use(express.json());
         
         console.log('🚀 Tous les services sont prêts!');
 
-        // Envoyer un événement pour signaler que le serveur est prêt
-        io.emit('server-ready');
+        // Le serveur est maintenant prêt à accepter des connexions et à démarrer la simulation
+        isServerReady = true;
         
     } catch (error) {
         console.error('❌ Erreur initialisation services:', error);
@@ -116,15 +117,6 @@ function simulateNetworkTraffic() {
 
 // Démarrer la simulation automatique une fois que le serveur est prêt
 let simulationInterval = null;
-io.on('connection', (socket) => {
-    socket.on('client-ready', () => {
-        console.log('✅ Client prêt, démarrage de la simulation côté serveur.');
-        // Démarrer la simulation si elle n'est pas déjà en cours
-        if (!simulationInterval) {
-            simulationInterval = setInterval(simulateNetworkTraffic, 3000);
-        }
-    });
-});
 
 // Route pour la page d'accueil
 app.get('/', (req, res) => {
@@ -347,6 +339,14 @@ app.post('/api/reward', async (req, res) => {
 // Gestion des connexions WebSocket
 io.on('connection', (socket) => {
     console.log('🔗 Nouveau client connecté:', socket.id);
+
+    // Si le serveur est prêt et qu'un client se connecte, on démarre la simulation
+    if (isServerReady && !simulationInterval) {
+        console.log('✅ Premier client connecté et serveur prêt. Démarrage de la simulation.');
+        simulationInterval = setInterval(simulateNetworkTraffic, 3000);
+    }
+
+    io.emit('server-ready'); // Informer le client que le serveur est prêt
     
     // Envoyer l'ID du topic au nouveau client
     const topicId = getTopicId();
