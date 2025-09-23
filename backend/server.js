@@ -192,6 +192,9 @@ app.post('/api/analyze', async (req, res) => {
             networkData: networkData
         };
 
+        // Envoyer les données brutes pour le graphique de trafic
+        io.emit('new-packet-data', { packetSize: networkData.packetSize });
+
         // Si menace détectée, envoyer une alerte HCS (logique réactive existante)
         if (finalDecision.isThreat) {
             const alertData = {
