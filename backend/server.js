@@ -3,8 +3,9 @@ const http = require('http');
 const fs = require('fs');
 const socketIo = require('socket.io');
 const path = require('path');
-const { sendHCSMessage, getTopicId } = require("./hedera-config");
+const { sendHCSMessage, getTopicId, createHCSTopic } = require("./hedera-config");
 const { getAnomalyDetector, checkBusinessRules } = require('./ai-detection-simple');
+const reputationService = require('./sensor-reputation');
 const { getSmsService } = require('./sms-service');
 const { getTokenService } = require("./token-service-simple");
 require('dotenv').config();
@@ -52,6 +53,12 @@ let anomalyDetector = null;
 let smsService = null;
 let tokenService = null;
 
+// --- Historique pour les nouveaux clients ---
+const MAX_LOG_HISTORY = 20;
+const hcsLogHistory = [];
+const smsLogHistory = [];
+const rewardsLogHistory = [];
+
 // Middleware pour servir les fichiers statiques
 app.use(express.static(path.join(__dirname, '../frontend')));
 app.use(express.json());
@@ -61,6 +68,15 @@ app.use(express.json());
     try {
         loadSettings();
         console.log('🔄 Initialisation des services...');
+
+        // Créer le Topic HCS au démarrage pour qu'il soit toujours disponible
+        await createHCSTopic();
+        const topicId = getTopicId();
+        if (topicId) {
+            // Diffuser l'info du topic à tous les clients dès qu'elle est prête
+            io.emit('topic-info', { topicId: topicId.toString() });
+        }
+
         
         anomalyDetector = await getAnomalyDetector();
         console.log('✅ Détecteur d\'anomalies initialisé');
@@ -72,11 +88,43 @@ app.use(express.json());
         console.log('✅ Service Token initialisé');
         
         console.log('🚀 Tous les services sont prêts!');
+
+        // Envoyer un événement pour signaler que le serveur est prêt
+        io.emit('server-ready');
         
     } catch (error) {
         console.error('❌ Erreur initialisation services:', error);
     }
 })();
+
+// --- Simulation de trafic réseau (côté serveur) ---
+function simulateNetworkTraffic() {
+    const networkData = {
+        sourceIP: `154.16.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`,
+        protocol: Math.random() > 0.5 ? 'TCP' : 'UDP',
+        packetSize: Math.floor(Math.random() * 1500),
+        sensorId: Math.floor(Math.random() * 6) + 1
+    };
+
+    // Simule un appel à l'API d'analyse
+    fetch(`http://localhost:${PORT}/api/analyze`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(networkData)
+    }).catch(error => console.error('Erreur de simulation interne:', error.message));
+}
+
+// Démarrer la simulation automatique une fois que le serveur est prêt
+let simulationInterval = null;
+io.on('connection', (socket) => {
+    socket.on('client-ready', () => {
+        console.log('✅ Client prêt, démarrage de la simulation côté serveur.');
+        // Démarrer la simulation si elle n'est pas déjà en cours
+        if (!simulationInterval) {
+            simulationInterval = setInterval(simulateNetworkTraffic, 3000);
+        }
+    });
+});
 
 // Route pour la page d'accueil
 app.get('/', (req, res) => {
@@ -155,11 +203,22 @@ app.post('/api/analyze', async (req, res) => {
             };
 
             const result = await sendHCSMessage(alertData);
-            io.emit('new-alert', { ...alertData, id: result.messageId });
+
+            // Ajouter au log et à l'historique
+            const logEntry = { ...alertData, id: result.messageId };
+            hcsLogHistory.unshift(logEntry);
+            if (hcsLogHistory.length > MAX_LOG_HISTORY) hcsLogHistory.pop();
+
+            io.emit('new-alert', logEntry);
+            io.emit('hcs-log-entry', logEntry); // Événement dédié pour le journal HCS
 
             // Mettre à jour le statut du capteur sur le front-end
             if (networkData.sensorId) {
                 io.emit('sensor-status-update', { sensorId: networkData.sensorId, status: 'alert' });
+                // Mettre à jour la réputation et notifier le client
+                const reputation = reputationService.addXpForAlert(networkData.sensorId, alertData);
+                io.emit('reputation-updated', { sensorId: networkData.sensorId, reputation });
+
                 setTimeout(() => {
                     io.emit('sensor-status-update', { sensorId: networkData.sensorId, status: 'active' });
                 }, 30000); // Retour à la normale après 30s
@@ -174,7 +233,11 @@ app.post('/api/analyze', async (req, res) => {
                         try {
                             const smsResults = await smsService.sendAlertSms(alertData, phoneNumbers);
                             console.log(`📱 SMS envoyés: ${smsResults.filter(r => r.success).length}/${smsResults.length}`);
-                            io.emit('sms-sent', { alertData, smsResults });
+                            const smsLogEntry = { alertData, smsResults };
+                            smsLogHistory.unshift(smsLogEntry);
+                            if (smsLogHistory.length > MAX_LOG_HISTORY) smsLogHistory.pop();
+
+                            io.emit('sms-sent', smsLogEntry);
                         } catch (smsError) {
                             console.error('❌ Erreur envoi SMS:', smsError);
                         }
@@ -196,6 +259,9 @@ app.post('/api/analyze', async (req, res) => {
                         
                         if (rewardResult.success) {
                             console.log(`🎉 Récompense distribuée: ${rewardResult.amount} SAHEL à ${sensorAccountId}`);
+                            rewardsLogHistory.unshift(rewardResult);
+                            if (rewardsLogHistory.length > MAX_LOG_HISTORY) rewardsLogHistory.pop();
+
                             // Diffuser via WebSocket
                             io.emit('reward-distributed', rewardResult);
                         }
@@ -287,6 +353,18 @@ io.on('connection', (socket) => {
     if (topicId) {
         socket.emit('topic-info', { topicId: topicId.toString() });
     }
+
+    // Envoyer l'historique des logs au nouveau client
+    socket.emit('log-history', hcsLogHistory);
+
+    // Envoyer l'historique des SMS
+    socket.emit('sms-log-history', smsLogHistory);
+
+    // Envoyer l'historique des récompenses
+    socket.emit('rewards-log-history', rewardsLogHistory);
+
+    // Envoyer l'état initial des réputations
+    socket.emit('reputations-init', reputationService.getAllReputations());
 
     // Envoyer les infos token si disponible
     if (tokenService) {

@@ -41,7 +41,7 @@
         .app-container {
             display: grid;
             grid-template-columns: 280px 1fr;
-            grid-template-rows: 80px 1fr 60px;
+            grid-template-rows: 80px 1fr 50px;
             grid-template-areas: 
                 "sidebar header"
                 "sidebar main"
@@ -443,6 +443,11 @@
             transition: border-color 0.3s;
         }
         
+        .form-control option {
+            color: var(--primary); /* Texte sombre pour une bonne lisibilité */
+            background-color: #fff; /* Fond blanc standard */
+        }
+
         .form-control:focus {
             outline: none;
             border-color: var(--accent);
@@ -462,32 +467,11 @@
             border-top: 1px solid rgba(255, 255, 255, 0.1);
             display: flex;
             align-items: center;
-            justify-content: space-between;
+            justify-content: center;
             padding: 0 30px;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             color: var(--text-secondary);
         }
-        .footer-left, .footer-center, .footer-right {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-        .footer-center { text-align: center; }
-        .footer-right { justify-content: flex-end; }
-        .footer-left a, .footer-right a {
-            color: var(--text-secondary);
-            text-decoration: none;
-            transition: color 0.3s;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 1.2rem; /* Agrandit les icônes */
-        }
-        .footer-left a:hover, .footer-right a:hover {
-            color: var(--accent);
-        }
-        .footer-right i { color: var(--success); }
         
         /* Token Panel */
         .token-panel {
@@ -705,15 +689,6 @@
             animation: pulse-sensor 2s infinite;
         }
 
-        .sensor-point.status-alert circle {
-            fill: var(--danger);
-            animation: pulse-alert 1s infinite;
-        }
-
-        .sensor-point.status-active circle {
-            fill: var(--success);
-        }
-
         .sensor-point text {
             fill: var(--light);
             font-size: 16px;
@@ -725,12 +700,6 @@
             0% { r: 8; opacity: 1; }
             50% { r: 14; opacity: 0.5; }
             100% { r: 8; opacity: 1; }
-        }
-        
-        @keyframes pulse-alert {
-            0% { opacity: 1; stroke-width: 2; }
-            50% { opacity: 0.6; stroke-width: 4; }
-            100% { opacity: 1; stroke-width: 2; }
         }
 
         /* SMS Section Styles */
@@ -1328,16 +1297,7 @@
         </div>
         
         <footer>
-            <div class="footer-left">
-                <a href="#" title="Voir le code source"><i class="fab fa-github"></i></a>
-                <a href="mailto:contact@sahelguard.dev" title="Nous contacter"><i class="fas fa-envelope"></i></a>
-            </div>
-            <div class="footer-center">
-                <p>SAHEL GUARD v1.0 | Hackathon Hedera 2025</p>
-            </div>
-            <div class="footer-right">
-                <a href="https://hedera.com/" target="_blank" rel="noopener">Powered by <i class="fab fa-hive"></i> Hedera</a>
-            </div>
+            <p>Développé pour le Hackathon Hedera 2025 - Track AI & DePIN | Made in Mali</p>
         </footer>
     </div>
 
@@ -1363,8 +1323,9 @@
         let totalAlerts = 392;
         let totalRewards = 196;
         
-        // Store pour le statut des capteurs
+        // Store pour le statut et la réputation des capteurs
         let sensorStatus = {};
+        let sensorReputations = {};
 
         // Écoute des événements WebSocket
         socket.on('connect', () => {
@@ -1409,11 +1370,6 @@
         socket.on('sms-sent', (smsData) => {
             console.log('📱 Notification SMS reçue:', smsData);
             addSmsToUI(smsData);
-        });
-
-        socket.on('sensor-status-update', (data) => {
-            console.log('🛰️ Statut capteur mis à jour:', data);
-            updateSensorStatus(data.sensorId, data.status);
         });
 
         // Gestion de l'envoi du formulaire
@@ -1672,19 +1628,17 @@
             }
         }
 
-        function updateSensorStatus(sensorId, status) {
-            sensorStatus[sensorId] = status;
+        function updateSensorVisual(sensorId) {
             const sensorElement = document.querySelector(`.sensor-point[data-id="${sensorId}"]`);
-            if (sensorElement) {
-                sensorElement.classList.remove('status-active', 'status-alert');
-                if (status === 'active') {
-                    sensorElement.classList.add('status-active');
-                } else if (status === 'alert') {
-                    sensorElement.classList.add('status-alert');
+            const reputation = sensorReputations[sensorId];
+            if (sensorElement && reputation) {
+                const circle = sensorElement.querySelector('circle');
+                // La couleur du statut "alert" est prioritaire
+                if (!sensorElement.classList.contains('status-alert')) {
+                    circle.style.fill = reputation.color;
                 }
             }
         }
-
 
         // Initialisation au chargement de la page
         document.addEventListener('DOMContentLoaded', () => {
@@ -1765,12 +1719,13 @@
                         const location = point.getAttribute('data-location');
                         const status = sensorStatus[sensorId] || 'active';
                         const statusText = status === 'active' ? 'Actif' : 'En Alerte';
-                        const lastAlert = new Date(Date.now() - Math.random() * 100000000).toLocaleString('fr-FR');
+                        const reputation = sensorReputations[sensorId] || { level: 'Bronze', xp: 0 };
 
                         tooltip.innerHTML = `
                             <h4><i class="fas fa-satellite-dish"></i> ${location}</h4>
                             <p><strong>Statut:</strong> <span style="color: ${status === 'active' ? 'var(--success)' : 'var(--danger)'};">${statusText}</span></p>
-                            <p><strong>Dernière activité:</strong> ${lastAlert}</p>
+                            <p><strong>Niveau:</strong> <span style="color: ${reputation.color}; font-weight: bold;">${reputation.level}</span></p>
+                            <p><strong>XP:</strong> ${reputation.xp}</p>
                         `;
                         tooltip.style.display = 'block';
                     });
