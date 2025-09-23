@@ -105,9 +105,12 @@ app.get('/', (req, res) => {
 });
 
 // --- Simulation de trafic réseau (côté serveur) ---
+const suspiciousIPs = [
+    `154.16.10.25`, `201.8.45.112`, `103.56.12.9`, `45.12.189.44`
+];
 function simulateNetworkTraffic() {
     const networkData = {
-        sourceIP: `154.16.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`,
+        sourceIP: suspiciousIPs[Math.floor(Math.random() * suspiciousIPs.length)],
         protocol: Math.random() > 0.5 ? 'TCP' : 'UDP',
         packetSize: Math.floor(Math.random() * 1500),
         sensorId: Math.floor(Math.random() * 6) + 1,
