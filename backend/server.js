@@ -5,6 +5,7 @@ const socketIo = require('socket.io');
 const path = require('path');
 const { sendHCSMessage, getTopicId, createHCSTopic } = require("./hedera-config");
 const { getAnomalyDetector, checkBusinessRules } = require('./ai-detection-simple');
+const axios = require('axios');
 const { getSmsService } = require('./sms-service');
 const { getTokenService } = require("./token-service-simple");
 require('dotenv').config();
@@ -51,6 +52,7 @@ function saveSettings() {
 let anomalyDetector = null;
 let smsService = null;
 let tokenService = null;
+let isServerReady = false;
 
 // --- Historique pour les nouveaux clients ---
 const MAX_LOG_HISTORY = 20;
@@ -88,8 +90,8 @@ app.use(express.json());
         
         console.log('🚀 Tous les services sont prêts!');
 
-        // Envoyer un événement pour signaler que le serveur est prêt
-        io.emit('server-ready');
+        // Le serveur est maintenant prêt à accepter des connexions et à démarrer la simulation
+        isServerReady = true;
         
     } catch (error) {
         console.error('❌ Erreur initialisation services:', error);
@@ -99,6 +101,30 @@ app.use(express.json());
 // Route pour la page d'accueil
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, '../frontend/index.html'));
+});
+
+// --- Simulation de trafic réseau (côté serveur) ---
+function simulateNetworkTraffic() {
+    const networkData = {
+        sourceIP: `154.16.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`,
+        protocol: Math.random() > 0.5 ? 'TCP' : 'UDP',
+        packetSize: Math.floor(Math.random() * 1500),
+        sensorId: Math.floor(Math.random() * 6) + 1
+    };
+
+    // Simule un appel à l'API d'analyse en utilisant axios
+    axios.post(`http://localhost:${PORT}/api/analyze`, networkData)
+        .catch(error => console.error('Erreur de simulation interne:', error.message));
+}
+
+// Démarrer la simulation automatique une fois que le serveur est prêt
+let simulationInterval = null;
+io.on('connection', (socket) => {
+    // Si le serveur est prêt et qu'un client se connecte, on démarre la simulation
+    if (isServerReady && !simulationInterval) {
+        console.log('✅ Premier client connecté et serveur prêt. Démarrage de la simulation.');
+        simulationInterval = setInterval(simulateNetworkTraffic, 3000);
+    }
 });
 
 // Route pour envoyer une alerte manuellement
@@ -317,6 +343,8 @@ app.post('/api/reward', async (req, res) => {
 // Gestion des connexions WebSocket
 io.on('connection', (socket) => {
     console.log('🔗 Nouveau client connecté:', socket.id);
+
+    io.emit('server-ready'); // Informer le client que le serveur est prêt
     
     // Envoyer l'ID du topic au nouveau client
     const topicId = getTopicId();
