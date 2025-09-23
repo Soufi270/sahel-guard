@@ -5,6 +5,7 @@ const socketIo = require('socket.io');
 const path = require('path');
 const { sendHCSMessage, getTopicId, createHCSTopic } = require("./hedera-config");
 const { getAnomalyDetector, checkBusinessRules } = require('./ai-detection-simple');
+const reputationService = require('./sensor-reputation');
 const axios = require('axios');
 const { getSmsService } = require('./sms-service');
 const { getTokenService } = require("./token-service-simple");
