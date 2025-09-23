@@ -41,7 +41,7 @@
         .app-container {
             display: grid;
             grid-template-columns: 280px 1fr;
-            grid-template-rows: 80px 1fr 50px;
+            grid-template-rows: 80px 1fr 60px;
             grid-template-areas: 
                 "sidebar header"
                 "sidebar main"
@@ -443,11 +443,6 @@
             transition: border-color 0.3s;
         }
         
-        .form-control option {
-            color: var(--primary); /* Texte sombre pour une bonne lisibilité */
-            background-color: #fff; /* Fond blanc standard */
-        }
-
         .form-control:focus {
             outline: none;
             border-color: var(--accent);
@@ -467,11 +462,32 @@
             border-top: 1px solid rgba(255, 255, 255, 0.1);
             display: flex;
             align-items: center;
-            justify-content: center;
+            justify-content: space-between;
             padding: 0 30px;
-            font-size: 0.9rem;
+            font-size: 0.95rem;
             color: var(--text-secondary);
         }
+        .footer-left, .footer-center, .footer-right {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .footer-center { text-align: center; }
+        .footer-right { justify-content: flex-end; }
+        .footer-left a, .footer-right a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: color 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1.2rem; /* Agrandit les icônes */
+        }
+        .footer-left a:hover, .footer-right a:hover {
+            color: var(--accent);
+        }
+        .footer-right i { color: var(--success); }
         
         /* Token Panel */
         .token-panel {
@@ -689,6 +705,15 @@
             animation: pulse-sensor 2s infinite;
         }
 
+        .sensor-point.status-alert circle {
+            fill: var(--danger);
+            animation: pulse-alert 1s infinite;
+        }
+
+        .sensor-point.status-active circle {
+            fill: var(--success);
+        }
+
         .sensor-point text {
             fill: var(--light);
             font-size: 16px;
@@ -700,6 +725,12 @@
             0% { r: 8; opacity: 1; }
             50% { r: 14; opacity: 0.5; }
             100% { r: 8; opacity: 1; }
+        }
+        
+        @keyframes pulse-alert {
+            0% { opacity: 1; stroke-width: 2; }
+            50% { opacity: 0.6; stroke-width: 4; }
+            100% { opacity: 1; stroke-width: 2; }
         }
 
         /* SMS Section Styles */
@@ -1297,7 +1328,16 @@
         </div>
         
         <footer>
-            <p>Développé pour le Hackathon Hedera 2025 - Track AI & DePIN | Made in Mali</p>
+            <div class="footer-left">
+                <a href="#" title="Voir le code source"><i class="fab fa-github"></i></a>
+                <a href="mailto:contact@sahelguard.dev" title="Nous contacter"><i class="fas fa-envelope"></i></a>
+            </div>
+            <div class="footer-center">
+                <p>SAHEL GUARD v1.0 | Hackathon Hedera 2025</p>
+            </div>
+            <div class="footer-right">
+                <a href="https://hedera.com/" target="_blank" rel="noopener">Powered by <i class="fab fa-hive"></i> Hedera</a>
+            </div>
         </footer>
     </div>
 
@@ -1323,9 +1363,8 @@
         let totalAlerts = 392;
         let totalRewards = 196;
         
-        // Store pour le statut et la réputation des capteurs
+        // Store pour le statut des capteurs
         let sensorStatus = {};
-        let sensorReputations = {};
 
         // Écoute des événements WebSocket
         socket.on('connect', () => {
@@ -1349,6 +1388,11 @@
         });
 
         socket.on('topic-info', (data) => {
+            console.log('ℹ️ Info Topic reçue:', data);
+            const topicIdElements = [document.getElementById('topic-id'), document.getElementById('hcs-topic-id')];
+            topicIdElements.forEach(el => {
+                if (el) el.textContent = data.topicId;
+            });
             topicIdElement.textContent = data.topicId;
         });
 
@@ -1364,12 +1408,49 @@
 
         socket.on('reward-distributed', (rewardData) => {
             console.log('🎉 Récompense reçue:', rewardData);
-            handleRewardNotification(rewardData);
+            handleRewardNotification(rewardData); // Appel de la fonction centrale
         });
 
         socket.on('sms-sent', (smsData) => {
             console.log('📱 Notification SMS reçue:', smsData);
             addSmsToUI(smsData);
+        });
+
+        socket.on('hcs-log-entry', (logData) => {
+            console.log('📝 Nouvelle entrée de log HCS reçue:', logData);
+            addHcsLogToUI(logData);
+        });
+
+        socket.on('sms-log-history', (history) => {
+            console.log('📜 Historique SMS reçu:', history);
+            const smsListElement = document.getElementById('sms-list');
+            if (smsListElement && history.length > 0) {
+                smsListElement.innerHTML = '';
+                history.forEach(log => addSmsToUI(log, false));
+            }
+        });
+
+        socket.on('rewards-log-history', (history) => {
+            console.log('📜 Historique récompenses reçu:', history);
+            const rewardsListElement = document.getElementById('rewards-list');
+            if (rewardsListElement && history.length > 0) {
+                rewardsListElement.innerHTML = '';
+                history.forEach(log => addRewardToUI(log, false));
+            }
+        });
+
+        socket.on('log-history', (history) => {
+            console.log('📜 Historique des logs reçu:', history);
+            const hcsLogList = document.getElementById('hcs-log-list');
+            if (hcsLogList && history.length > 0) {
+                hcsLogList.innerHTML = ''; // Vider le message d'initialisation
+                history.forEach(log => addHcsLogToUI(log, false)); // Ajouter sans animation
+            }
+        });
+
+        socket.on('sensor-status-update', (data) => {
+            console.log('🛰️ Statut capteur mis à jour:', data);
+            updateSensorStatus(data.sensorId, data.status);
         });
 
         // Gestion de l'envoi du formulaire
@@ -1484,17 +1565,41 @@
                 if (alertsListElement.children.length > 10) {
                     alertsListElement.removeChild(alertsListElement.lastChild);
                 }
+
+                // Faire défiler vers le haut pour voir la nouvelle alerte
+                alertsListElement.scrollTop = 0;
             }
         }
 
         // Fonction pour gérer les notifications de récompense
         function handleRewardNotification(rewardData) {
-            totalRewards++;
-            updateStats();
-            
-            // Créer un élément de récompense
+             totalRewards++;
+             updateStats(); // Mettre à jour les stats globales
+
+             addRewardToUI(rewardData); // Ajouter à la liste des récompenses
+
+             // Ajouter également comme une alerte normale
+             addAlertToUI({
+                 type: 'reward',
+                 severity: 'low',
+                 source: 'Système de Récompenses',
+                 description: `Distribution de ${rewardData.amount} SAHEL à ${rewardData.recipient} - ${rewardData.reason}`,
+                 timestamp: Date.now()
+             });
+        }
+
+        // Fonction dédiée à l'ajout d'une récompense à l'interface
+        function addRewardToUI(rewardData, animate = true) {
+            const rewardsListElement = document.getElementById('rewards-list');
+            if (!rewardsListElement) return;
+
+            // Vider le message d'initialisation
+            if (rewardsListElement.children.length === 1 && rewardsListElement.firstChild.classList.contains('slide-in')) {
+                rewardsListElement.innerHTML = '';
+            }
+
             const rewardElement = document.createElement('div');
-            rewardElement.className = 'reward-item slide-in';
+            rewardElement.className = `reward-item ${animate ? 'slide-in' : ''}`;
             
             rewardElement.innerHTML = `
                 <div class="reward-icon">
@@ -1514,38 +1619,23 @@
                 </div>
             `;
             
-            // Ajouter à la liste des récompenses
-            if (rewardsListElement) {
-                rewardsListElement.insertBefore(rewardElement, rewardsListElement.firstChild);
-                
-                // Limiter à 10 récompenses affichées
-                if (rewardsListElement.children.length > 10) {
-                    rewardsListElement.removeChild(rewardsListElement.lastChild);
-                }
-            }
-            
-            // Ajouter également comme une alerte normale
-            addAlertToUI({
-                type: 'reward',
-                severity: 'low',
-                source: 'Système de Récompenses',
-                description: `Distribution de ${rewardData.amount} SAHEL à ${rewardData.recipient} - ${rewardData.reason}`,
-                timestamp: Date.now()
-            });
+            rewardsListElement.insertBefore(rewardElement, rewardsListElement.firstChild);
+            if (rewardsListElement.children.length > 10) rewardsListElement.removeChild(rewardsListElement.lastChild);
+            rewardsListElement.scrollTop = 0;
         }
 
         // Fonction pour ajouter une transaction au journal HCS
-        function addHcsLogToUI(logData) {
+        function addHcsLogToUI(logData, animate = true) {
             const hcsLogList = document.getElementById('hcs-log-list');
             if (!hcsLogList) return;
 
             // Supprimer le message d'initialisation
-            if (hcsLogList.children.length === 1 && hcsLogList.firstChild.textContent.includes('Initialisation')) {
+            if (hcsLogList.children.length === 1 && hcsLogList.firstChild.textContent?.includes('Initialisation')) {
                 hcsLogList.innerHTML = '';
             }
 
             const logItem = document.createElement('div');
-            logItem.className = 'hcs-log-item slide-in';
+            logItem.className = `hcs-log-item ${animate ? 'slide-in' : ''}`;
 
             const formattedDate = new Date(logData.timestamp || Date.now()).toLocaleTimeString('fr-FR');
             const message = JSON.stringify({ type: logData.type, severity: logData.severity, source: logData.source });
@@ -1556,15 +1646,23 @@
             if (hcsLogList.children.length > 50) {
                 hcsLogList.removeChild(hcsLogList.lastChild);
             }
+
+            // Faire défiler vers le haut
+            hcsLogList.scrollTop = 0;
         }
 
         // Fonction pour ajouter une notification SMS à l'interface
-        function addSmsToUI(smsData) {
+        function addSmsToUI(smsData, animate = true) {
             const smsListElement = document.getElementById('sms-list');
             if (!smsListElement) return;
 
+            // Vider le message d'initialisation
+            if (smsListElement.children.length === 1 && smsListElement.firstChild.classList.contains('slide-in')) {
+                smsListElement.innerHTML = '';
+            }
+
             const smsItem = document.createElement('div');
-            smsItem.className = 'sms-item slide-in';
+            smsItem.className = `sms-item ${animate ? 'slide-in' : ''}`;
 
             const successfulSends = smsData.smsResults.filter(r => r.success).length;
 
@@ -1591,6 +1689,9 @@
             if (smsListElement.children.length > 10) {
                 smsListElement.removeChild(smsListElement.lastChild);
             }
+
+            // Faire défiler vers le haut
+            smsListElement.scrollTop = 0;
         }
 
         // Fonction pour mettre à jour les statistiques
@@ -1606,13 +1707,16 @@
         // Chargement initial: récupérer les infos du topic et du token
         async function loadInitialData() {
             try {
-                // Récupérer les infos du topic
+                // Récupérer les infos du topic (pour un chargement rapide si le serveur est déjà chaud)
                 const topicResponse = await fetch('/api/topic-info');
                 const topicData = await topicResponse.json();
                 
-                topicIdElement.textContent = topicData.topicId;
-                hederaStatusElement.textContent = topicData.status === 'Actif' ? 'Connecté' : 'Déconnecté';
-                hederaStatusElement.className = topicData.status === 'Actif' ? 'status-value connected' : 'status-value disconnected';
+                if (topicData.topicId !== "Non défini") {
+                    const topicIdElements = [document.getElementById('topic-id'), document.getElementById('hcs-topic-id')];
+                    topicIdElements.forEach(el => {
+                        if (el) el.textContent = topicData.topicId;
+                    });
+                }
                 
                 // Récupérer les infos du token
                 const tokenResponse = await fetch('/api/token-info');
@@ -1628,29 +1732,20 @@
             }
         }
 
-        function updateSensorVisual(sensorId) {
+        function updateSensorStatus(sensorId, status) {
+            sensorStatus[sensorId] = status;
             const sensorElement = document.querySelector(`.sensor-point[data-id="${sensorId}"]`);
-            const reputation = sensorReputations[sensorId];
-            if (sensorElement && reputation) {
-                const circle = sensorElement.querySelector('circle');
-                // La couleur du statut "alert" est prioritaire
-                if (!sensorElement.classList.contains('status-alert')) {
-                    circle.style.fill = reputation.color;
+            if (sensorElement) {
+                sensorElement.classList.remove('status-active', 'status-alert');
+                if (status === 'active') {
+                    sensorElement.classList.add('status-active');
+                    updateSensorVisual(sensorId); // Réappliquer la couleur de réputation
+                } else if (status === 'alert') {
+                    sensorElement.classList.add('status-alert');
                 }
             }
         }
 
-        function updateSensorVisual(sensorId) {
-            const sensorElement = document.querySelector(`.sensor-point[data-id="${sensorId}"]`);
-            const reputation = sensorReputations[sensorId];
-            if (sensorElement && reputation) {
-                const circle = sensorElement.querySelector('circle');
-                // La couleur du statut "alert" est prioritaire
-                if (!sensorElement.classList.contains('status-alert')) {
-                    circle.style.fill = reputation.color;
-                }
-            }
-        }
 
         // Initialisation au chargement de la page
         document.addEventListener('DOMContentLoaded', () => {
@@ -1731,13 +1826,12 @@
                         const location = point.getAttribute('data-location');
                         const status = sensorStatus[sensorId] || 'active';
                         const statusText = status === 'active' ? 'Actif' : 'En Alerte';
-                        const reputation = sensorReputations[sensorId] || { level: 'Bronze', xp: 0 };
+                        const lastAlert = new Date(Date.now() - Math.random() * 100000000).toLocaleString('fr-FR');
 
                         tooltip.innerHTML = `
                             <h4><i class="fas fa-satellite-dish"></i> ${location}</h4>
                             <p><strong>Statut:</strong> <span style="color: ${status === 'active' ? 'var(--success)' : 'var(--danger)'};">${statusText}</span></p>
-                            <p><strong>Niveau:</strong> <span style="color: ${reputation.color}; font-weight: bold;">${reputation.level}</span></p>
-                            <p><strong>XP:</strong> ${reputation.xp}</p>
+                            <p><strong>Dernière activité:</strong> ${lastAlert}</p>
                         `;
                         tooltip.style.display = 'block';
                     });
