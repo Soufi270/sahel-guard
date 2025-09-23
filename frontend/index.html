@@ -980,10 +980,6 @@
                     <i class="fas fa-link"></i>
                     <span>Hedera HCS</span>
                 </li>
-                <li class="menu-item" id="menu-predictive-ai">
-                    <i class="fas fa-brain"></i>
-                    <span>IA Prédictive</span>
-                </li>
                 <li class="menu-item" id="menu-rewards">
                     <i class="fas fa-coins"></i>
                     <span>Récompenses HTS</span>
@@ -1282,20 +1278,6 @@
                 </div>
             </div>
         </main>
-
-        <div class="predictive-ai-section" id="predictive-ai-section" style="display: none;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
-                <h2><i class="fas fa-brain"></i> Prévisions de Menaces par l'IA</h2>
-            </div>
-
-            <div class="predictions-container" id="predictions-container">
-                <div class="prediction-placeholder">
-                    <i class="fas fa-spinner fa-spin"></i>
-                    <p>En attente de nouvelles prédictions de l'IA...</p>
-                </div>
-                <!-- Les cartes de prédiction seront ajoutées ici -->
-            </div>
-        </div>
 
         <div class="settings-section" id="settings-section">
             <h2><i class="fas fa-cogs"></i> Paramètres du Système</h2>
@@ -1801,8 +1783,6 @@
             const hcsSection = document.getElementById('hcs-section');
             const menuSettings = document.getElementById('menu-settings');
             const settingsSection = document.getElementById('settings-section');
-            const menuPredictiveAI = document.getElementById('menu-predictive-ai');
-            const predictiveAISection = document.getElementById('predictive-ai-section');
             const mainContent = document.querySelector('main');
 
             if (menuAlerts && alertSection) {
@@ -1837,17 +1817,6 @@
                 menuHcs.addEventListener('click', (e) => {
                     e.preventDefault();
                     hcsSection.scrollIntoView({ behavior: 'smooth' });
-                });
-            }
-
-            if (menuPredictiveAI && predictiveAISection) {
-                menuPredictiveAI.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    mainContent.style.display = 'none';
-                    settingsSection.style.display = 'none';
-                    predictiveAISection.style.display = 'block';
-                    allMenuItems.forEach(item => item.classList.remove('active'));
-                    menuPredictiveAI.classList.add('active');
                 });
             }
 
@@ -1898,7 +1867,6 @@
             function hideSettingsPanel() {
                 mainContent.style.display = 'block';
                 settingsSection.style.display = 'none';
-                predictiveAISection.style.display = 'none';
                 settingsSection.classList.remove('active');
                 menuSettings.classList.remove('active');
                 // Réactiver le tableau de bord par défaut
@@ -1918,7 +1886,7 @@
 
             // Faire en sorte que les autres onglets cachent les paramètres
             allMenuItems.forEach(item => {
-                if (item.id !== 'menu-settings' && item.id !== 'menu-predictive-ai') {
+                if (item.id !== 'menu-settings') {
                     item.addEventListener('click', () => {
                         if (settingsSection.classList.contains('active')) {
                             hideSettingsPanel();

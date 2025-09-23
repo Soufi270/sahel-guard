@@ -4,7 +4,7 @@ const fs = require('fs');
 const socketIo = require('socket.io');
 const path = require('path');
 const { sendHCSMessage, getTopicId, createHCSTopic } = require("./hedera-config");
-const { getAnomalyDetector } = require('./ai-detection-advanced');
+const { getAnomalyDetector, checkBusinessRules } = require('./ai-detection-simple');
 const reputationService = require('./sensor-reputation');
 const axios = require('axios');
 const { getSmsService } = require('./sms-service');
@@ -176,37 +176,28 @@ app.post('/api/analyze', async (req, res) => {
             });
         }
 
-        const analysisResult = anomalyDetector.analyzeAndPredict(networkData);
+        const aiResult = await anomalyDetector.detectAnomaly(networkData);
+        const businessRulesResult = checkBusinessRules(networkData);
         
         // Décision finale
         let finalDecision = {
-            isThreat: analysisResult.isThreat,
-            analysis: analysisResult,
+            isThreat: aiResult.isAnomaly || businessRulesResult.length > 0,
+            aiAnalysis: aiResult,
+            businessRules: businessRulesResult,
             timestamp: Date.now(),
             networkData: networkData
         };
 
-        // Si une menace est prédite, notifier les clients sur un canal dédié
-        if (analysisResult.prediction.isPredicted) {
-            console.log(`🔮 Prédiction de menace: ${analysisResult.prediction.predictionType}`);
-            const flowData = {
-                ...analysisResult.prediction,
-                source: analysisResult.features.sourceIP,
-                destination: analysisResult.features.destinationIP
-            };
-            io.emit('threat-prediction', flowData);
-        }
-
-        // Si menace détectée, envoyer une alerte HCS
+        // Si menace détectée, envoyer une alerte HCS (logique réactive existante)
         if (finalDecision.isThreat) {
             const alertData = {
                 type: 'auto-detected-threat',
-                severity: analysisResult.confidence > 0.95 ? 'critical' : (analysisResult.confidence > 0.8 ? 'high' : 'medium'),
+                severity: businessRulesResult.length > 0 ? businessRulesResult[0].severity : (aiResult.confidence > 90 ? 'high' : 'medium'),
                 source: networkData.sourceIP || 'Inconnue',
-                description: `Menace détectée par IA: ${analysisResult.reason}`,
-                confidence: analysisResult.confidence,
+                description: `Menace détectée: ${aiResult.isAnomaly ? 'Anomalie IA' : 'Règle métier'} - ${businessRulesResult.map(r => r.rule).join(', ')}`,
+                confidence: aiResult.confidence,
                 location: 'Mali',
-                aiFeatures: analysisResult.features
+                aiFeatures: aiResult.features
             };
 
             const result = await sendHCSMessage(alertData);
