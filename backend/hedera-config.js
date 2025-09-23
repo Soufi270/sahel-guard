@@ -28,6 +28,7 @@ function getHederaClient() {
 
 // Variable globale pour stocker l'ID du topic
 let topicId = null;
+let signatureTopicId = null;
 
 // Fonction pour créer un topic HCS
 async function createHCSTopic() {
@@ -95,6 +96,44 @@ async function sendHCSMessage(messageData) {
     }
 }
 
+// Fonction pour créer le topic des signatures
+async function createSignatureTopic() {
+    const client = getHederaClient();
+    try {
+        console.log("Création d'un nouveau topic HCS pour les signatures...");
+        const tx = await new TopicCreateTransaction()
+            .setTopicMemo("SAHEL GUARD - Registre des signatures de menaces")
+            .execute(client);
+        const receipt = await tx.getReceipt(client);
+        signatureTopicId = receipt.topicId;
+        console.log("✅ Topic de signatures créé avec succès. ID:", signatureTopicId.toString());
+        return signatureTopicId;
+    } catch (error) {
+        console.error("❌ Erreur lors de la création du topic de signatures:", error.message);
+        throw error;
+    }
+}
+
+// Fonction pour envoyer une signature sur le topic dédié
+async function sendSignatureMessage(signatureData) {
+    const client = getHederaClient();
+    try {
+        if (!signatureTopicId) {
+            await createSignatureTopic();
+        }
+        const message = { ...signatureData, timestamp: Date.now() };
+        await new TopicMessageSubmitTransaction()
+            .setTopicId(signatureTopicId)
+            .setMessage(JSON.stringify(message))
+            .execute(client);
+        console.log("✍️ Signature de menace envoyée sur le topic:", signatureTopicId.toString());
+        return message;
+    } catch (error) {
+        console.error("❌ Erreur lors de l'envoi de la signature:", error.message);
+        throw error;
+    }
+}
+
 // Fonction pour récupérer l'ID du topic
 function getTopicId() {
     return topicId;
@@ -104,5 +143,7 @@ module.exports = {
     getHederaClient,
     createHCSTopic,
     sendHCSMessage,
-    getTopicId
+    getTopicId,
+    createSignatureTopic,
+    sendSignatureMessage
 };

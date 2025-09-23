@@ -980,6 +980,10 @@
                     <i class="fas fa-link"></i>
                     <span>Hedera HCS</span>
                 </li>
+                <li class="menu-item" id="menu-signatures">
+                    <i class="fas fa-fingerprint"></i>
+                    <span>Registre Menaces</span>
+                </li>
                 <li class="menu-item" id="menu-rewards">
                     <i class="fas fa-coins"></i>
                     <span>Récompenses HTS</span>
@@ -1220,6 +1224,16 @@
                 </div>
             </div>
 
+            <div class="hcs-section" id="signatures-section">
+                <h2><i class="fas fa-fingerprint"></i> Registre Public des Signatures de Menaces</h2>
+                <div class="hcs-log-list" id="signatures-log-list">
+                    <!-- Les signatures de menaces apparaîtront ici -->
+                    <div class="hcs-log-item">
+                        <p>Initialisation du registre des signatures...</p>
+                    </div>
+                </div>
+            </div>
+
             <div class="sms-section" id="sms-section">
                 <h2><i class="fas fa-comment-dots"></i> Journal des Notifications SMS</h2>
                 <div class="sms-list" id="sms-list">
@@ -1413,6 +1427,20 @@
         socket.on('hcs-log-entry', (logData) => {
             console.log('📝 Nouvelle entrée de log HCS reçue:', logData);
             addHcsLogToUI(logData);
+        });
+
+        socket.on('new-signature', (signatureData) => {
+            console.log('✍️ Nouvelle signature reçue:', signatureData);
+            addSignatureToUI(signatureData);
+        });
+
+        socket.on('signature-log-history', (history) => {
+            console.log('📜 Historique des signatures reçu:', history);
+            const list = document.getElementById('signatures-log-list');
+            if (list && history.length > 0) {
+                list.innerHTML = '';
+                history.forEach(log => addSignatureToUI(log, false));
+            }
         });
 
         socket.on('sms-log-history', (history) => {
@@ -1645,6 +1673,27 @@
             hcsLogList.scrollTop = 0;
         }
 
+        function addSignatureToUI(signatureData, animate = true) {
+            const list = document.getElementById('signatures-log-list');
+            if (!list) return;
+
+            if (list.children.length === 1 && list.firstChild.textContent?.includes('Initialisation')) {
+                list.innerHTML = '';
+            }
+
+            const item = document.createElement('div');
+            item.className = `hcs-log-item ${animate ? 'slide-in' : ''}`;
+
+            const formattedDate = new Date(signatureData.timestamp || Date.now()).toLocaleTimeString('fr-FR');
+            const message = JSON.stringify({ type: signatureData.threatType, severity: signatureData.severity, pattern: signatureData.sourcePattern });
+
+            item.innerHTML = `<span class="log-time">[${formattedDate}]</span> <span class="log-type">NOUVELLE SIGNATURE</span> <span class="log-message">${message}</span>`;
+            list.insertBefore(item, list.firstChild);
+
+            if (list.children.length > 50) list.removeChild(list.lastChild);
+            list.scrollTop = 0;
+        }
+
         // Fonction pour ajouter une notification SMS à l'interface
         function addSmsToUI(smsData, animate = true) {
             const smsListElement = document.getElementById('sms-list');
@@ -1768,6 +1817,8 @@
             const mapSection = document.getElementById('map-section');
             const menuSms = document.getElementById('menu-sms');
             const smsSection = document.getElementById('sms-section');
+            const menuSignatures = document.getElementById('menu-signatures');
+            const signaturesSection = document.getElementById('signatures-section');
             const menuHcs = document.getElementById('menu-hcs');
             const hcsSection = document.getElementById('hcs-section');
             const menuSettings = document.getElementById('menu-settings');
@@ -1799,6 +1850,13 @@
                 menuSms.addEventListener('click', (e) => {
                     e.preventDefault();
                     smsSection.scrollIntoView({ behavior: 'smooth' });
+                });
+            }
+
+            if (menuSignatures && signaturesSection) {
+                menuSignatures.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    signaturesSection.scrollIntoView({ behavior: 'smooth' });
                 });
             }
 

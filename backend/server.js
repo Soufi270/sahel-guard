@@ -3,7 +3,7 @@ const http = require('http');
 const fs = require('fs');
 const socketIo = require('socket.io');
 const path = require('path');
-const { sendHCSMessage, getTopicId, createHCSTopic } = require("./hedera-config");
+const { sendHCSMessage, getTopicId, createHCSTopic, createSignatureTopic, sendSignatureMessage } = require("./hedera-config");
 const { getAnomalyDetector, checkBusinessRules } = require('./ai-detection-simple');
 const reputationService = require('./sensor-reputation');
 const axios = require('axios');
@@ -57,6 +57,7 @@ let isServerReady = false;
 
 // --- Historique pour les nouveaux clients ---
 const MAX_LOG_HISTORY = 20;
+const signatureLogHistory = [];
 const hcsLogHistory = [];
 const smsLogHistory = [];
 const rewardsLogHistory = [];
@@ -74,6 +75,9 @@ app.use(express.json());
         // Créer le Topic HCS au démarrage pour qu'il soit toujours disponible
         await createHCSTopic();
         const topicId = getTopicId();
+        // Créer le Topic pour les signatures
+        await createSignatureTopic();
+
         if (topicId) {
             // Diffuser l'info du topic à tous les clients dès qu'elle est prête
             io.emit('topic-info', { topicId: topicId.toString() });
@@ -201,6 +205,17 @@ app.post('/api/analyze', async (req, res) => {
             };
 
             const result = await sendHCSMessage(alertData);
+
+            // Créer et envoyer une signature de menace
+            const signature = {
+                threatType: alertData.type,
+                severity: alertData.severity,
+                sourcePattern: networkData.sourceIP.split('.').slice(0, 2).join('.') + '.*.*',
+            };
+            const signatureLogEntry = await sendSignatureMessage(signature);
+            signatureLogHistory.unshift(signatureLogEntry);
+            if (signatureLogHistory.length > MAX_LOG_HISTORY) signatureLogHistory.pop();
+            io.emit('new-signature', signatureLogEntry);
 
             // Ajouter au log et à l'historique
             const logEntry = { ...alertData, id: result.messageId };
@@ -356,6 +371,9 @@ io.on('connection', (socket) => {
 
     // Envoyer l'historique des logs au nouveau client
     socket.emit('log-history', hcsLogHistory);
+
+    // Envoyer l'historique des signatures
+    socket.emit('signature-log-history', signatureLogHistory);
 
     // Envoyer l'historique des SMS
     socket.emit('sms-log-history', smsLogHistory);
