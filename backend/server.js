@@ -110,7 +110,9 @@ function simulateNetworkTraffic() {
         sourceIP: `154.16.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`,
         protocol: Math.random() > 0.5 ? 'TCP' : 'UDP',
         packetSize: Math.floor(Math.random() * 1500),
-        sensorId: Math.floor(Math.random() * 6) + 1
+        sensorId: Math.floor(Math.random() * 6) + 1,
+        destinationIP: `10.0.0.${Math.floor(Math.random() * 255)}`,
+        destinationPort: [21, 22, 80, 443, 3389, 8080][Math.floor(Math.random() * 6)]
     };
 
     // Simule un appel à l'API d'analyse en utilisant axios
