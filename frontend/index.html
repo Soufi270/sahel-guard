@@ -1640,6 +1640,18 @@
             }
         }
 
+        function updateSensorVisual(sensorId) {
+            const sensorElement = document.querySelector(`.sensor-point[data-id="${sensorId}"]`);
+            const reputation = sensorReputations[sensorId];
+            if (sensorElement && reputation) {
+                const circle = sensorElement.querySelector('circle');
+                // La couleur du statut "alert" est prioritaire
+                if (!sensorElement.classList.contains('status-alert')) {
+                    circle.style.fill = reputation.color;
+                }
+            }
+        }
+
         // Initialisation au chargement de la page
         document.addEventListener('DOMContentLoaded', () => {
             console.log('Page SAHEL GUARD initialisée');
