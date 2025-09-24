@@ -58,7 +58,6 @@ let isServerReady = false;
 // --- Historique pour les nouveaux clients ---
 const MAX_LOG_HISTORY = 20;
 const signatureLogHistory = [];
-const signatureLogHistory = [];
 const hcsLogHistory = [];
 const smsLogHistory = [];
 const rewardsLogHistory = [];
