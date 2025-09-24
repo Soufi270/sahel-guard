@@ -41,7 +41,7 @@
         .app-container {
             display: grid;
             grid-template-columns: 280px 1fr;
-            grid-template-rows: 80px 1fr 50px;
+            grid-template-rows: 80px 1fr 60px;
             grid-template-areas: 
                 "sidebar header"
                 "sidebar main"
@@ -212,11 +212,6 @@
             transform: translateY(-5px);
             background: rgba(255, 255, 255, 0.07);
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-        }
-
-        .card:hover.glow-red { box-shadow: 0 0 20px rgba(255, 107, 107, 0.4); }
-        .card:hover.glow-yellow { box-shadow: 0 0 20px rgba(255, 209, 102, 0.4); }
-        .card:hover.glow-blue { box-shadow: 0 0 20px rgba(0, 170, 255, 0.4); }
         }
         
         .card-header {
@@ -449,8 +444,8 @@
         }
         
         .form-control option {
-            color: var(--primary); /* Texte sombre pour une bonne lisibilité */
-            background-color: #fff; /* Fond blanc standard */
+            background: white;
+            color: black;
         }
 
         .form-control:focus {
@@ -472,7 +467,7 @@
             border-top: 1px solid rgba(255, 255, 255, 0.1);
             display: flex;
             align-items: center;
-            justify-content: center;
+            justify-content: space-between;
             padding: 0 30px;
             font-size: 0.95rem;
             color: var(--text-secondary);
@@ -483,7 +478,7 @@
             align-items: center;
             gap: 15px;
         }
-        .footer-center { justify-content: center; }
+        .footer-center { text-align: center; }
         .footer-right { justify-content: flex-end; }
         .footer-left a, .footer-right a {
             color: var(--text-secondary);
@@ -492,8 +487,11 @@
             display: inline-flex;
             align-items: center;
             gap: 8px;
+            font-size: 1.2rem; /* Agrandit les icônes */
         }
-        .footer-left a:hover, .footer-right a:hover { color: var(--accent); }
+        .footer-left a:hover, .footer-right a:hover {
+            color: var(--accent);
+        }
         .footer-right i { color: var(--success); }
         
         /* Token Panel */
@@ -712,6 +710,15 @@
             animation: pulse-sensor 2s infinite;
         }
 
+        .sensor-point.status-alert circle {
+            fill: var(--danger);
+            animation: pulse-alert 1s infinite;
+        }
+
+        .sensor-point.status-active circle {
+            fill: var(--success);
+        }
+
         .sensor-point text {
             fill: var(--light);
             font-size: 16px;
@@ -723,6 +730,43 @@
             0% { r: 8; opacity: 1; }
             50% { r: 14; opacity: 0.5; }
             100% { r: 8; opacity: 1; }
+        }
+        
+        @keyframes pulse-alert {
+            0% { opacity: 1; stroke-width: 2; }
+            50% { opacity: 0.6; stroke-width: 4; }
+            100% { opacity: 1; stroke-width: 2; }
+        }
+
+        /* Styles pour la visualisation des flux */
+        .threat-flow-group {
+            animation: fade-out-line 1s 3s forwards;
+        }
+
+        .threat-flow-line {
+            stroke-width: 2;
+            stroke-linecap: round;
+            animation: draw-line 1.5s ease-out forwards;
+            transform-origin: center;
+        }
+
+        .threat-flow-glow {
+            stroke-width: 8;
+            stroke-linecap: round;
+            stroke-opacity: 0.3;
+            filter: blur(4px);
+            animation: draw-line 1.5s ease-out forwards;
+        }
+
+        .flow-particle { fill: white; }
+
+        @keyframes draw-line {
+            from { stroke-dasharray: 1000; stroke-dashoffset: 1000; }
+            to { stroke-dasharray: 1000; stroke-dashoffset: 0; }
+        }
+
+        @keyframes fade-out-line {
+            to { opacity: 0; }
         }
 
         /* SMS Section Styles */
@@ -967,6 +1011,10 @@
                     <i class="fas fa-link"></i>
                     <span>Hedera HCS</span>
                 </li>
+                <li class="menu-item" id="menu-signatures">
+                    <i class="fas fa-fingerprint"></i>
+                    <span>Registre Menaces</span>
+                </li>
                 <li class="menu-item" id="menu-rewards">
                     <i class="fas fa-coins"></i>
                     <span>Récompenses HTS</span>
@@ -1014,25 +1062,25 @@
             </div>
             
             <div class="dashboard-grid">
-                <div class="card glow-red">
+                <div class="card">
                     <div class="card-header">
                         <h3 class="card-title">Capteurs Réseau</h3>
                         <div class="card-icon" style="background: rgba(255, 107, 107, 0.2); color: #ff6b6b;">
                             <i class="fas fa-satellite-dish"></i>
                         </div>
                     </div>
-                    <div class="stat-value" id="sensors-count">6</div>
+                    <div class="stat-value">24</div>
                     <div class="stat-label">Capteurs Actifs</div>
                 </div>
                 
-                <div class="card glow-yellow">
+                <div class="card">
                     <div class="card-header">
                         <h3 class="card-title">Alertes HCS</h3>
                         <div class="card-icon" style="background: rgba(255, 209, 102, 0.2); color: #ffd166;">
                             <i class="fas fa-link"></i>
                         </div>
                     </div>
-                    <div class="stat-value" id="total-alerts-card">392</div>
+                    <div class="stat-value">156</div>
                     <div class="stat-label">Alertes Enregistrées</div>
                 </div>
                 
@@ -1054,11 +1102,11 @@
                             <i class="fas fa-coins"></i>
                         </div>
                     </div>
-                    <div class="stat-value" id="total-rewards-card">196</div>
+                    <div class="stat-value">3,450</div>
                     <div class="stat-label">SAHEL Distribués</div>
                     <div class="token-grid">
                         <div class="token-stat">
-                            <span class="token-value" id="total-alerts">392</span> <!-- This one is for the list -->
+                            <span class="token-value" id="total-alerts">392</span>
                             <span class="token-label">Total Alertes</span>
                         </div>
                         <div class="token-stat">
@@ -1218,6 +1266,16 @@
                 </div>
             </div>
 
+            <div class="hcs-section" id="signatures-section">
+                <h2><i class="fas fa-fingerprint"></i> Registre Public des Signatures de Menaces</h2>
+                <div class="hcs-log-list" id="signatures-log-list">
+                    <!-- Les signatures de menaces apparaîtront ici -->
+                    <div class="hcs-log-item">
+                        <p>Initialisation du registre des signatures...</p>
+                    </div>
+                </div>
+            </div>
+
             <div class="sms-section" id="sms-section">
                 <h2><i class="fas fa-comment-dots"></i> Journal des Notifications SMS</h2>
                 <div class="sms-list" id="sms-list">
@@ -1351,17 +1409,12 @@
         const totalAlertsElement = document.getElementById('total-alerts');
         const totalRewardsElement = document.getElementById('total-rewards');
 
-        const totalAlertsCard = document.getElementById('total-alerts-card');
-        const totalRewardsCard = document.getElementById('total-rewards-card');
-        const sensorsCount = document.getElementById('sensors-count');
-
         // Variables globales
         let totalAlerts = 392;
         let totalRewards = 196;
         
-        // Store pour le statut et la réputation des capteurs
+        // Store pour le statut des capteurs
         let sensorStatus = {};
-        let sensorReputations = {};
 
         // Écoute des événements WebSocket
         socket.on('connect', () => {
@@ -1385,6 +1438,11 @@
         });
 
         socket.on('topic-info', (data) => {
+            console.log('ℹ️ Info Topic reçue:', data);
+            const topicIdElements = [document.getElementById('topic-id'), document.getElementById('hcs-topic-id')];
+            topicIdElements.forEach(el => {
+                if (el) el.textContent = data.topicId;
+            });
             topicIdElement.textContent = data.topicId;
         });
 
@@ -1398,14 +1456,65 @@
             addHcsLogToUI(alertData);
         });
 
+        socket.on('new-signature', (signatureData) => {
+            console.log('✍️ Nouvelle signature reçue:', signatureData);
+            addSignatureToUI(signatureData);
+        });
+
+        socket.on('signature-log-history', (history) => {
+            console.log('📜 Historique des signatures reçu:', history);
+            const list = document.getElementById('signatures-log-list');
+            if (list && history.length > 0) {
+                list.innerHTML = '';
+                history.forEach(log => addSignatureToUI(log, false));
+            }
+        });
+
         socket.on('reward-distributed', (rewardData) => {
             console.log('🎉 Récompense reçue:', rewardData);
-            handleRewardNotification(rewardData);
+            handleRewardNotification(rewardData); // Appel de la fonction centrale
         });
 
         socket.on('sms-sent', (smsData) => {
             console.log('📱 Notification SMS reçue:', smsData);
             addSmsToUI(smsData);
+        });
+
+        socket.on('hcs-log-entry', (logData) => {
+            console.log('📝 Nouvelle entrée de log HCS reçue:', logData);
+            addHcsLogToUI(logData);
+        });
+
+        socket.on('sms-log-history', (history) => {
+            console.log('📜 Historique SMS reçu:', history);
+            const smsListElement = document.getElementById('sms-list');
+            if (smsListElement && history.length > 0) {
+                smsListElement.innerHTML = '';
+                history.forEach(log => addSmsToUI(log, false));
+            }
+        });
+
+        socket.on('rewards-log-history', (history) => {
+            console.log('📜 Historique récompenses reçu:', history);
+            const rewardsListElement = document.getElementById('rewards-list');
+            if (rewardsListElement && history.length > 0) {
+                rewardsListElement.innerHTML = '';
+                history.forEach(log => addRewardToUI(log, false));
+            }
+        });
+
+        socket.on('log-history', (history) => {
+            console.log('📜 Historique des logs reçu:', history);
+            const hcsLogList = document.getElementById('hcs-log-list');
+            if (hcsLogList && history.length > 0) {
+                hcsLogList.innerHTML = ''; // Vider le message d'initialisation
+                history.forEach(log => addHcsLogToUI(log, false)); // Ajouter sans animation
+            }
+        });
+
+        socket.on('sensor-status-update', (data) => {
+            console.log('🛰️ Statut capteur mis à jour:', data);
+            updateSensorStatus(data.sensorId, data.status);
         });
 
         // Gestion de l'envoi du formulaire
@@ -1520,17 +1629,41 @@
                 if (alertsListElement.children.length > 10) {
                     alertsListElement.removeChild(alertsListElement.lastChild);
                 }
+
+                // Faire défiler vers le haut pour voir la nouvelle alerte
+                alertsListElement.scrollTop = 0;
             }
         }
 
         // Fonction pour gérer les notifications de récompense
         function handleRewardNotification(rewardData) {
-            totalRewards++;
-            updateStats();
-            
-            // Créer un élément de récompense
+             totalRewards++;
+             updateStats(); // Mettre à jour les stats globales
+
+             addRewardToUI(rewardData); // Ajouter à la liste des récompenses
+
+             // Ajouter également comme une alerte normale
+             addAlertToUI({
+                 type: 'reward',
+                 severity: 'low',
+                 source: 'Système de Récompenses',
+                 description: `Distribution de ${rewardData.amount} SAHEL à ${rewardData.recipient} - ${rewardData.reason}`,
+                 timestamp: Date.now()
+             });
+        }
+
+        // Fonction dédiée à l'ajout d'une récompense à l'interface
+        function addRewardToUI(rewardData, animate = true) {
+            const rewardsListElement = document.getElementById('rewards-list');
+            if (!rewardsListElement) return;
+
+            // Vider le message d'initialisation
+            if (rewardsListElement.children.length === 1 && rewardsListElement.firstChild.classList.contains('slide-in')) {
+                rewardsListElement.innerHTML = '';
+            }
+
             const rewardElement = document.createElement('div');
-            rewardElement.className = 'reward-item slide-in';
+            rewardElement.className = `reward-item ${animate ? 'slide-in' : ''}`;
             
             rewardElement.innerHTML = `
                 <div class="reward-icon">
@@ -1550,38 +1683,23 @@
                 </div>
             `;
             
-            // Ajouter à la liste des récompenses
-            if (rewardsListElement) {
-                rewardsListElement.insertBefore(rewardElement, rewardsListElement.firstChild);
-                
-                // Limiter à 10 récompenses affichées
-                if (rewardsListElement.children.length > 10) {
-                    rewardsListElement.removeChild(rewardsListElement.lastChild);
-                }
-            }
-            
-            // Ajouter également comme une alerte normale
-            addAlertToUI({
-                type: 'reward',
-                severity: 'low',
-                source: 'Système de Récompenses',
-                description: `Distribution de ${rewardData.amount} SAHEL à ${rewardData.recipient} - ${rewardData.reason}`,
-                timestamp: Date.now()
-            });
+            rewardsListElement.insertBefore(rewardElement, rewardsListElement.firstChild);
+            if (rewardsListElement.children.length > 10) rewardsListElement.removeChild(rewardsListElement.lastChild);
+            rewardsListElement.scrollTop = 0;
         }
 
         // Fonction pour ajouter une transaction au journal HCS
-        function addHcsLogToUI(logData) {
+        function addHcsLogToUI(logData, animate = true) {
             const hcsLogList = document.getElementById('hcs-log-list');
             if (!hcsLogList) return;
 
             // Supprimer le message d'initialisation
-            if (hcsLogList.children.length === 1 && hcsLogList.firstChild.textContent.includes('Initialisation')) {
+            if (hcsLogList.children.length === 1 && hcsLogList.firstChild.textContent?.includes('Initialisation')) {
                 hcsLogList.innerHTML = '';
             }
 
             const logItem = document.createElement('div');
-            logItem.className = 'hcs-log-item slide-in';
+            logItem.className = `hcs-log-item ${animate ? 'slide-in' : ''}`;
 
             const formattedDate = new Date(logData.timestamp || Date.now()).toLocaleTimeString('fr-FR');
             const message = JSON.stringify({ type: logData.type, severity: logData.severity, source: logData.source });
@@ -1592,15 +1710,44 @@
             if (hcsLogList.children.length > 50) {
                 hcsLogList.removeChild(hcsLogList.lastChild);
             }
+
+            // Faire défiler vers le haut
+            hcsLogList.scrollTop = 0;
+        }
+
+        function addSignatureToUI(signatureData, animate = true) {
+            const list = document.getElementById('signatures-log-list');
+            if (!list) return;
+
+            if (list.children.length === 1 && list.firstChild.textContent?.includes('Initialisation')) {
+                list.innerHTML = '';
+            }
+
+            const item = document.createElement('div');
+            item.className = `hcs-log-item ${animate ? 'slide-in' : ''}`;
+
+            const formattedDate = new Date(signatureData.timestamp || Date.now()).toLocaleTimeString('fr-FR');
+            const message = JSON.stringify({ type: signatureData.threatType, severity: signatureData.severity, pattern: signatureData.sourcePattern });
+
+            item.innerHTML = `<span class="log-time">[${formattedDate}]</span> <span class="log-type">NOUVELLE SIGNATURE</span> <span class="log-message">${message}</span>`;
+            list.insertBefore(item, list.firstChild);
+
+            if (list.children.length > 50) list.removeChild(list.lastChild);
+            list.scrollTop = 0;
         }
 
         // Fonction pour ajouter une notification SMS à l'interface
-        function addSmsToUI(smsData) {
+        function addSmsToUI(smsData, animate = true) {
             const smsListElement = document.getElementById('sms-list');
             if (!smsListElement) return;
 
+            // Vider le message d'initialisation
+            if (smsListElement.children.length === 1 && smsListElement.firstChild.classList.contains('slide-in')) {
+                smsListElement.innerHTML = '';
+            }
+
             const smsItem = document.createElement('div');
-            smsItem.className = 'sms-item slide-in';
+            smsItem.className = `sms-item ${animate ? 'slide-in' : ''}`;
 
             const successfulSends = smsData.smsResults.filter(r => r.success).length;
 
@@ -1627,48 +1774,34 @@
             if (smsListElement.children.length > 10) {
                 smsListElement.removeChild(smsListElement.lastChild);
             }
+
+            // Faire défiler vers le haut
+            smsListElement.scrollTop = 0;
         }
 
         // Fonction pour mettre à jour les statistiques
         function updateStats() {
-            // Animer les compteurs
-            animateCount(totalAlertsElement, totalAlerts);
-            animateCount(totalAlertsCard, totalAlerts);
-            animateCount(totalRewardsElement, totalRewards);
-            animateCount(totalRewardsCard, totalRewards);
-        }
-
-        function animateCount(element, targetValue) {
             if (totalAlertsElement) {
-                const startValue = parseInt(element.textContent.replace(/,/g, '')) || 0;
-                const duration = 1000; // 1 seconde
-                let startTime = null;
-
-                function animation(currentTime) {
-                    if (startTime === null) startTime = currentTime;
-                    const progress = Math.min((currentTime - startTime) / duration, 1);
-                    const currentValue = Math.floor(progress * (targetValue - startValue) + startValue);
-                    element.textContent = currentValue.toLocaleString('fr-FR');
-                    if (progress < 1) {
-                        requestAnimationFrame(animation);
-                    }
-                }
-                requestAnimationFrame(animation);
-            } else {
-                element.textContent = targetValue.toLocaleString('fr-FR');
+                totalAlertsElement.textContent = totalAlerts;
+            }
+            if (totalRewardsElement) {
+                totalRewardsElement.textContent = totalRewards;
             }
         }
 
         // Chargement initial: récupérer les infos du topic et du token
         async function loadInitialData() {
             try {
-                // Récupérer les infos du topic
+                // Récupérer les infos du topic (pour un chargement rapide si le serveur est déjà chaud)
                 const topicResponse = await fetch('/api/topic-info');
                 const topicData = await topicResponse.json();
                 
-                topicIdElement.textContent = topicData.topicId;
-                hederaStatusElement.textContent = topicData.status === 'Actif' ? 'Connecté' : 'Déconnecté';
-                hederaStatusElement.className = topicData.status === 'Actif' ? 'status-value connected' : 'status-value disconnected';
+                if (topicData.topicId !== "Non défini") {
+                    const topicIdElements = [document.getElementById('topic-id'), document.getElementById('hcs-topic-id')];
+                    topicIdElements.forEach(el => {
+                        if (el) el.textContent = topicData.topicId;
+                    });
+                }
                 
                 // Récupérer les infos du token
                 const tokenResponse = await fetch('/api/token-info');
@@ -1684,29 +1817,20 @@
             }
         }
 
-        function updateSensorVisual(sensorId) {
+        function updateSensorStatus(sensorId, status) {
+            sensorStatus[sensorId] = status;
             const sensorElement = document.querySelector(`.sensor-point[data-id="${sensorId}"]`);
-            const reputation = sensorReputations[sensorId];
-            if (sensorElement && reputation) {
-                const circle = sensorElement.querySelector('circle');
-                // La couleur du statut "alert" est prioritaire
-                if (!sensorElement.classList.contains('status-alert')) {
-                    circle.style.fill = reputation.color;
+            if (sensorElement) {
+                sensorElement.classList.remove('status-active', 'status-alert');
+                if (status === 'active') {
+                    sensorElement.classList.add('status-active');
+                    updateSensorVisual(sensorId); // Réappliquer la couleur de réputation
+                } else if (status === 'alert') {
+                    sensorElement.classList.add('status-alert');
                 }
             }
         }
 
-        function updateSensorVisual(sensorId) {
-            const sensorElement = document.querySelector(`.sensor-point[data-id="${sensorId}"]`);
-            const reputation = sensorReputations[sensorId];
-            if (sensorElement && reputation) {
-                const circle = sensorElement.querySelector('circle');
-                // La couleur du statut "alert" est prioritaire
-                if (!sensorElement.classList.contains('status-alert')) {
-                    circle.style.fill = reputation.color;
-                }
-            }
-        }
 
         // Initialisation au chargement de la page
         document.addEventListener('DOMContentLoaded', () => {
@@ -1735,6 +1859,8 @@
             const mapSection = document.getElementById('map-section');
             const menuSms = document.getElementById('menu-sms');
             const smsSection = document.getElementById('sms-section');
+            const menuSignatures = document.getElementById('menu-signatures');
+            const signaturesSection = document.getElementById('signatures-section');
             const menuHcs = document.getElementById('menu-hcs');
             const hcsSection = document.getElementById('hcs-section');
             const menuSettings = document.getElementById('menu-settings');
@@ -1769,11 +1895,80 @@
                 });
             }
 
+            if (menuSignatures && signaturesSection) {
+                menuSignatures.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    signaturesSection.scrollIntoView({ behavior: 'smooth' });
+                });
+            }
+
             if (menuHcs && hcsSection) {
                 menuHcs.addEventListener('click', (e) => {
                     e.preventDefault();
                     hcsSection.scrollIntoView({ behavior: 'smooth' });
                 });
+            }
+
+            // --- Logique de visualisation des flux ---
+            const threatFlowsGroup = document.getElementById('threat-flows-group');
+            const threatOrigins = Array.from(document.querySelectorAll('#threat-origins circle'));
+            let originIndex = 0;
+
+            function drawThreatFlow(flowData) {
+                if (!threatFlowsGroup) return;
+
+                const destSensor = document.querySelector(`.sensor-point[data-id="${flowData.sensorId}"]`);
+                if (!destSensor) {
+                    console.warn(`Capteur de destination non trouvé pour l'ID: ${flowData.sensorId}`);
+                    return;
+                }
+
+                const originPoint = threatOrigins[originIndex % threatOrigins.length];
+                originIndex++;
+
+                const destCircle = destSensor.querySelector('circle');
+                const x1 = originPoint.getAttribute('cx');
+                const y1 = originPoint.getAttribute('cy');
+                const x2 = destCircle.getAttribute('cx');
+                const y2 = destCircle.getAttribute('cy');
+
+                const threatColors = {
+                    critical: 'var(--danger)',
+                    high: 'var(--warning)',
+                    medium: 'var(--accent)',
+                    low: 'var(--success)'
+                };
+                const color = threatColors[flowData.severity] || 'var(--danger)';
+
+                const pathData = `M${x1},${y1} L${x2},${y2}`;
+
+                const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                group.setAttribute('class', 'threat-flow-group');
+
+                const glowLine = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                glowLine.setAttribute('d', pathData);
+                glowLine.setAttribute('stroke', color);
+                glowLine.setAttribute('class', 'threat-flow-glow');
+                group.appendChild(glowLine);
+
+                const mainLine = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                mainLine.setAttribute('d', pathData);
+                mainLine.setAttribute('stroke', color);
+                mainLine.setAttribute('class', 'threat-flow-line');
+                group.appendChild(mainLine);
+
+                const particle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                particle.setAttribute('r', '3.5');
+                particle.setAttribute('class', 'flow-particle');
+                const animateMotion = document.createElementNS('http://www.w3.org/2000/svg', 'animateMotion');
+                animateMotion.setAttribute('dur', '1.5s');
+                animateMotion.setAttribute('path', pathData);
+                particle.appendChild(animateMotion);
+                group.appendChild(particle);
+
+                threatFlowsGroup.appendChild(group);
+
+                setTimeout(() => { group.remove(); }, 4000);
             }
 
             // --- Map Tooltip Logic ---
@@ -1787,13 +1982,12 @@
                         const location = point.getAttribute('data-location');
                         const status = sensorStatus[sensorId] || 'active';
                         const statusText = status === 'active' ? 'Actif' : 'En Alerte';
-                        const reputation = sensorReputations[sensorId] || { level: 'Bronze', xp: 0 };
+                        const lastAlert = new Date(Date.now() - Math.random() * 100000000).toLocaleString('fr-FR');
 
                         tooltip.innerHTML = `
                             <h4><i class="fas fa-satellite-dish"></i> ${location}</h4>
                             <p><strong>Statut:</strong> <span style="color: ${status === 'active' ? 'var(--success)' : 'var(--danger)'};">${statusText}</span></p>
-                            <p><strong>Niveau:</strong> <span style="color: ${reputation.color}; font-weight: bold;">${reputation.level}</span></p>
-                            <p><strong>XP:</strong> ${reputation.xp}</p>
+                            <p><strong>Dernière activité:</strong> ${lastAlert}</p>
                         `;
                         tooltip.style.display = 'block';
                     });

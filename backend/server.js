@@ -58,6 +58,7 @@ let isServerReady = false;
 // --- Historique pour les nouveaux clients ---
 const MAX_LOG_HISTORY = 20;
 const signatureLogHistory = [];
+const signatureLogHistory = [];
 const hcsLogHistory = [];
 const smsLogHistory = [];
 const rewardsLogHistory = [];
@@ -371,6 +372,9 @@ io.on('connection', (socket) => {
 
     // Envoyer l'historique des logs au nouveau client
     socket.emit('log-history', hcsLogHistory);
+
+    // Envoyer l'historique des signatures
+    socket.emit('signature-log-history', signatureLogHistory);
 
     // Envoyer l'historique des signatures
     socket.emit('signature-log-history', signatureLogHistory);
