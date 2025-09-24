@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SAHEL GUARD - Système de Sécurité Réseau Décentralisé</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
             /* Nouvelle palette "Cyber" */
@@ -1019,14 +1018,15 @@
                     <div class="stat-label">Alertes Enregistrées</div>
                 </div>
                 
-                <div class="card glow-blue">
+                <div class="card">
                     <div class="card-header">
-                        <h3 class="card-title">Trafic Réseau</h3>
+                        <h3 class="card-title">IA Détection</h3>
                         <div class="card-icon" style="background: rgba(78, 205, 196, 0.2); color: #4ecdc4;">
-                            <i class="fas fa-chart-area"></i>
+                            <i class="fas fa-brain"></i>
                         </div>
                     </div>
-                    <canvas id="traffic-chart" style="margin-top: 15px;"></canvas>
+                    <div class="stat-value">98%</div>
+                    <div class="stat-label">Précision</div>
                 </div>
                 
                 <div class="card token-panel">
@@ -1371,11 +1371,6 @@
             addHcsLogToUI(alertData);
         });
 
-        socket.on('new-packet-data', (data) => {
-            // Mettre à jour le graphique de trafic
-            updateTrafficChart(data.packetSize);
-        });
-
         socket.on('reward-distributed', (rewardData) => {
             console.log('🎉 Récompense reçue:', rewardData);
             handleRewardNotification(rewardData);
@@ -1686,51 +1681,6 @@
             }
         }
 
-        // --- Logique du graphique de trafic ---
-        const trafficChartCtx = document.getElementById('traffic-chart');
-        let trafficChart;
-
-        function initializeTrafficChart() {
-            if (!trafficChartCtx) return;
-            const initialData = Array(30).fill(0);
-            trafficChart = new Chart(trafficChartCtx, {
-                type: 'line',
-                data: {
-                    labels: Array(30).fill(''),
-                    datasets: [{
-                        label: 'Taille des Paquets (octets)',
-                        data: initialData,
-                        borderColor: 'rgba(0, 170, 255, 0.8)',
-                        backgroundColor: 'rgba(0, 170, 255, 0.1)',
-                        fill: true,
-                        tension: 0.4,
-                        pointRadius: 0
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        x: { display: false },
-                        y: {
-                            display: true,
-                            beginAtZero: true,
-                            grid: { color: 'rgba(255, 255, 255, 0.1)' },
-                            ticks: { color: 'var(--text-secondary)' }
-                        }
-                    }
-                }
-            });
-        }
-
-        function updateTrafficChart(packetSize) {
-            if (!trafficChart) return;
-            trafficChart.data.datasets[0].data.push(packetSize);
-            trafficChart.data.datasets[0].data.shift();
-            trafficChart.update('none'); // 'none' pour une mise à jour sans animation
-        }
-
         // Initialisation au chargement de la page
         document.addEventListener('DOMContentLoaded', () => {
             console.log('Page SAHEL GUARD initialisée');
@@ -1738,9 +1688,6 @@
             
             // Mettre à jour les stats initiales
             updateStats();
-
-            // Initialiser le graphique
-            initializeTrafficChart();
 
             // Bouton pour simuler une alerte
             const newAlertBtn = document.getElementById('new-alert-btn');
