@@ -1062,25 +1062,25 @@
             </div>
             
             <div class="dashboard-grid">
-                <div class="card">
+                <div class="card glow-red">
                     <div class="card-header">
                         <h3 class="card-title">Capteurs Réseau</h3>
                         <div class="card-icon" style="background: rgba(255, 107, 107, 0.2); color: #ff6b6b;">
                             <i class="fas fa-satellite-dish"></i>
                         </div>
                     </div>
-                    <div class="stat-value">24</div>
+                    <div class="stat-value" id="sensors-count">6</div>
                     <div class="stat-label">Capteurs Actifs</div>
                 </div>
                 
-                <div class="card">
+                <div class="card glow-yellow">
                     <div class="card-header">
                         <h3 class="card-title">Alertes HCS</h3>
                         <div class="card-icon" style="background: rgba(255, 209, 102, 0.2); color: #ffd166;">
                             <i class="fas fa-link"></i>
                         </div>
                     </div>
-                    <div class="stat-value">156</div>
+                    <div class="stat-value" id="total-alerts-card">392</div>
                     <div class="stat-label">Alertes Enregistrées</div>
                 </div>
                 
@@ -1091,7 +1091,7 @@
                             <i class="fas fa-brain"></i>
                         </div>
                     </div>
-                    <div class="stat-value">98%</div>
+                    <div class="stat-value">98.2%</div>
                     <div class="stat-label">Précision</div>
                 </div>
                 
@@ -1102,7 +1102,7 @@
                             <i class="fas fa-coins"></i>
                         </div>
                     </div>
-                    <div class="stat-value">3,450</div>
+                    <div class="stat-value" id="total-rewards-card">196</div>
                     <div class="stat-label">SAHEL Distribués</div>
                     <div class="token-grid">
                         <div class="token-stat">
@@ -1408,6 +1408,10 @@
         const alertForm = document.getElementById('alert-form');
         const totalAlertsElement = document.getElementById('total-alerts');
         const totalRewardsElement = document.getElementById('total-rewards');
+
+        const totalAlertsCard = document.getElementById('total-alerts-card');
+        const totalRewardsCard = document.getElementById('total-rewards-card');
+        const sensorsCount = document.getElementById('sensors-count');
 
         // Variables globales
         let totalAlerts = 392;
@@ -1781,11 +1785,31 @@
 
         // Fonction pour mettre à jour les statistiques
         function updateStats() {
+            // Animer les compteurs
+            animateCount(totalAlertsElement, totalAlerts);
+            animateCount(totalAlertsCard, totalAlerts);
+            animateCount(totalRewardsElement, totalRewards);
+            animateCount(totalRewardsCard, totalRewards);
+        }
+
+        function animateCount(element, targetValue) {
             if (totalAlertsElement) {
-                totalAlertsElement.textContent = totalAlerts;
-            }
-            if (totalRewardsElement) {
-                totalRewardsElement.textContent = totalRewards;
+                const startValue = parseInt(element.textContent.replace(/,/g, '')) || 0;
+                const duration = 1000; // 1 seconde
+                let startTime = null;
+
+                function animation(currentTime) {
+                    if (startTime === null) startTime = currentTime;
+                    const progress = Math.min((currentTime - startTime) / duration, 1);
+                    const currentValue = Math.floor(progress * (targetValue - startValue) + startValue);
+                    element.textContent = currentValue.toLocaleString('fr-FR');
+                    if (progress < 1) {
+                        requestAnimationFrame(animation);
+                    }
+                }
+                requestAnimationFrame(animation);
+            } else {
+                element.textContent = targetValue.toLocaleString('fr-FR');
             }
         }
 
