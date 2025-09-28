@@ -3,64 +3,70 @@ const axios = require('axios');
 // Service SMS pour les opérateurs maliens
 class MaliSmsService {
     constructor() {
-        this.providers = {
-            orange: {
-                name: 'Orange Mali',
-                apiUrl: 'https://api.orange.com/smsmessaging/v1/outbound/',
-                // Vous devrez obtenir ces credentials sur le portail développeur Orange
-                clientId: process.env.ORANGE_CLIENT_ID,
-                clientSecret: process.env.ORANGE_CLIENT_SECRET
-            },
-            malitel: {
-                name: 'Malitel',
-                apiUrl: 'https://api.malitel.ml/sms/send',
-                // Credentials Malitel (à configurer)
-                username: process.env.MALITEL_USERNAME,
-                password: process.env.MALITEL_PASSWORD
-            }
-        };
-        
-        this.isEnabled = process.env.SMS_ENABLED === 'true';
-        console.log(`📱 Service SMS ${this.isEnabled ? 'activé' : 'désactivé'}`);
+        this.clientId = process.env.ORANGE_CLIENT_ID;
+        this.clientSecret = process.env.ORANGE_CLIENT_SECRET;
+        this.senderNumber = process.env.ORANGE_SENDER_NUMBER; // Le numéro fourni par Orange
+        this.accessToken = null;
+        this.tokenExpiresAt = 0;
+
+        if (this.clientId && this.clientSecret && this.senderNumber) {
+            this.isEnabled = true;
+            console.log('📱 Service SMS Orange configuré et activé.');
+        } else {
+            this.isEnabled = false;
+            console.log('⚠️ Service SMS désactivé (credentials Orange manquants).');
+        }
     }
 
-    // Simulation d'envoi SMS (pour le prototype)
-    async sendSmsSimulation(phoneNumber, message) {
-        console.log(`📲 [SIMULATION] SMS à ${phoneNumber}: ${message}`);
-        return {
-            success: true,
-            provider: 'simulation',
-            messageId: 'sim-' + Date.now(),
-            simulated: true
-        };
+    // Obtenir un jeton d'accès auprès d'Orange
+    async getAccessToken() {
+        // Si le jeton existe et n'est pas expiré, on le réutilise
+        if (this.accessToken && Date.now() < this.tokenExpiresAt) {
+            return this.accessToken;
+        }
+
+        console.log('🔄 Obtention d\'un nouveau jeton d\'accès Orange...');
+        const credentials = Buffer.from(`${this.clientId}:${this.clientSecret}`).toString('base64');
+        const response = await axios.post('https://api.orange.com/oauth/v2/token', 'grant_type=client_credentials', {
+            headers: {
+                'Authorization': `Basic ${credentials}`,
+                'Content-Type': 'application/x-www-form-urlencoded'
+            }
+        });
+
+        this.accessToken = response.data.access_token;
+        // On garde le jeton valide pour un peu moins longtemps que sa durée de vie réelle pour être sûr
+        this.tokenExpiresAt = Date.now() + (response.data.expires_in - 60) * 1000;
+        console.log('✅ Jeton d\'accès Orange obtenu.');
+        return this.accessToken;
     }
 
     // Envoi réel via Orange Mali (à configurer avec de vraies credentials)
     async sendViaOrange(phoneNumber, message) {
         try {
-            // Note: Cette implémentation nécessite un compte développeur Orange
+            const token = await this.getAccessToken();
             console.log(`📲 Tentative envoi via Orange Mali à ${phoneNumber}`);
-            
-            // Ici viendrait le vrai code d'intégration API Orange
-            // Pour l'instant, on simule pour éviter les erreurs
-            return await this.sendSmsSimulation(phoneNumber, `[ORANGE] ${message}`);
-            
-        } catch (error) {
-            console.error('❌ Erreur envoi Orange:', error);
-            throw error;
-        }
-    }
 
-    // Envoi réel via Malitel (à configurer)
-    async sendViaMalitel(phoneNumber, message) {
-        try {
-            console.log(`📲 Tentative envoi via Malitel à ${phoneNumber}`);
-            
-            // Simulation pour le prototype
-            return await this.sendSmsSimulation(phoneNumber, `[MALITEL] ${message}`);
-            
+            const senderAddress = `tel:+${this.senderNumber.replace(/\D/g, '')}`;
+            const url = `https://api.orange.com/smsmessaging/v1/outbound/${encodeURIComponent(senderAddress)}/requests`;
+
+            const body = {
+                outboundSMSMessageRequest: {
+                    address: `tel:${phoneNumber}`,
+                    senderAddress: senderAddress,
+                    outboundSMSTextMessage: {
+                        message: message
+                    }
+                }
+            };
+
+            await axios.post(url, body, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            return { success: true, provider: 'orange', simulated: false };
         } catch (error) {
-            console.error('❌ Erreur envoi Malitel:', error);
+            console.error('❌ Erreur envoi Orange:', error.response ? error.response.data : error.message);
             throw error;
         }
     }
@@ -84,18 +90,8 @@ class MaliSmsService {
             try {
                 // Formatage du numéro pour le Mali
                 const formattedNumber = this.formatMaliPhoneNumber(phoneNumber);
-                
-                // Tentative d'envoi (priorité à Orange, puis Malitel)
-                let result;
-                try {
-                    result = await this.sendViaOrange(formattedNumber, message);
-                } catch (orangeError) {
-                    console.log('🔁 Fallback vers Malitel...');
-                    result = await this.sendViaMalitel(formattedNumber, message);
-                }
-                
+                const result = await this.sendViaOrange(formattedNumber, message);
                 results.push({ phoneNumber, success: true, ...result });
-                
             } catch (error) {
                 console.error(`❌ Échec envoi à ${phoneNumber}:`, error.message);
                 results.push({ phoneNumber, success: false, error: error.message });
