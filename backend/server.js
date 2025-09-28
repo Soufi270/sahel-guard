@@ -133,7 +133,7 @@ io.on('connection', (socket) => {
     // Si le serveur est prêt et qu'un client se connecte, on démarre la simulation
     if (isServerReady && !simulationInterval) {
         console.log('✅ Premier client connecté et serveur prêt. Démarrage de la simulation.');
-        simulationInterval = setInterval(simulateNetworkTraffic, 3000);
+        simulationInterval = setInterval(simulateNetworkTraffic, 5000); // Ralentissement de 3s à 5s
     }
 });
 
