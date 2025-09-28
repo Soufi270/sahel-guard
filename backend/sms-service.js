@@ -10,11 +10,11 @@ class MaliSmsService {
         this.tokenExpiresAt = 0;
 
         if (this.clientId && this.clientSecret && this.senderNumber) {
-            this.isEnabled = true;
+            this.isConfigured = true;
             console.log('📱 Service SMS Orange configuré et activé.');
         } else {
-            this.isEnabled = false;
-            console.log('⚠️ Service SMS désactivé (credentials Orange manquants).');
+            this.isConfigured = false;
+            console.log('⚠️ Service SMS non configuré (credentials Orange manquants).');
         }
     }
 
@@ -41,7 +41,7 @@ class MaliSmsService {
         return this.accessToken;
     }
 
-    // Envoi réel via Orange Mali (à configurer avec de vraies credentials)
+    // Envoi réel via Orange Mali 
     async sendViaOrange(phoneNumber, message) {
         try {
             const token = await this.getAccessToken();
@@ -73,7 +73,7 @@ class MaliSmsService {
 
     // Méthode principale d'envoi SMS
     async sendAlertSms(alertData, phoneNumbers) {
-        if (!this.isEnabled) {
+        if (!this.isConfigured) {
             console.log('⚠️ Service SMS désactivé');
             return { sent: 0, skipped: phoneNumbers.length };
         }
