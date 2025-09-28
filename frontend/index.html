@@ -1646,15 +1646,6 @@
              updateStats(); // Mettre à jour les stats globales
 
              addRewardToUI(rewardData); // Ajouter à la liste des récompenses
-
-             // Ajouter également comme une alerte normale
-             addAlertToUI({
-                 type: 'reward',
-                 severity: 'low',
-                 source: 'Système de Récompenses',
-                 description: `Distribution de ${rewardData.amount} HBAR à ${rewardData.recipient} - ${rewardData.reason}`,
-                 timestamp: Date.now()
-             });
         }
 
         // Fonction dédiée à l'ajout d'une récompense à l'interface
