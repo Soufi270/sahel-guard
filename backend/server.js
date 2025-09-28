@@ -271,7 +271,7 @@ app.post('/api/analyze', async (req, res) => {
                         );
                         
                         if (rewardResult.success) {
-                            console.log(`🎉 Récompense distribuée: ${rewardResult.amount} SAHEL à ${sensorAccountId}`);
+                            console.log(`🎉 Récompense distribuée: ${rewardResult.amount} HBAR à ${sensorAccountId}`);
                             rewardsLogHistory.unshift(rewardResult);
                             if (rewardsLogHistory.length > MAX_LOG_HISTORY) rewardsLogHistory.pop();
 
