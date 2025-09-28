@@ -1104,7 +1104,7 @@
                         </div>
                     </div>
                     <div class="stat-value" id="total-rewards-card">196</div>
-                    <div class="stat-label">SAHEL Distribués</div>
+                    <div class="stat-label">HBAR Distribués</div>
                     <div class="token-grid">
                         <div class="token-stat">
                             <span class="token-value" id="total-alerts">392</span>
@@ -1214,29 +1214,29 @@
                         <g id="threat-flows-group"></g>
 
                         <!-- Capteurs -->
-                        <g class="sensor-point" data-id="1" data-location="Dakar" data-ip="10.0.0.1">
+                        <g class="sensor-point" data-id="1" data-location="Kayes" data-ip="10.0.0.1">
                             <circle cx="180" cy="280" r="8"/>
-                            <text x="180" y="305">Dakar</text>
+                            <text x="180" y="305">Kayes</text>
                         </g>
                         <g class="sensor-point" data-id="2" data-location="Bamako" data-ip="10.0.0.2">
                             <circle cx="280" cy="380" r="8"/>
                             <text x="280" y="405">Bamako</text>
                         </g>
-                        <g class="sensor-point" data-id="3" data-location="Abidjan" data-ip="10.0.0.3">
+                        <g class="sensor-point" data-id="3" data-location="Sikasso" data-ip="10.0.0.3">
                             <circle cx="360" cy="480" r="8"/>
-                            <text x="360" y="505">Abidjan</text>
+                            <text x="360" y="505">Sikasso</text>
                         </g>
-                        <g class="sensor-point" data-id="4" data-location="Accra" data-ip="10.0.0.4">
+                        <g class="sensor-point" data-id="4" data-location="Ségou" data-ip="10.0.0.4">
                             <circle cx="390" cy="350" r="8"/>
-                            <text x="390" y="375">Accra</text>
+                            <text x="390" y="375">Ségou</text>
                         </g>
-                        <g class="sensor-point" data-id="5" data-location="Lagos" data-ip="10.0.0.5">
+                        <g class="sensor-point" data-id="5" data-location="Mopti" data-ip="10.0.0.5">
                             <circle cx="480" cy="290" r="8"/>
-                            <text x="480" y="315">Lagos</text>
+                            <text x="480" y="315">Mopti</text>
                         </g>
-                        <g class="sensor-point" data-id="6" data-location="Ouaga" data-ip="10.0.0.6">
+                        <g class="sensor-point" data-id="6" data-location="Gao" data-ip="10.0.0.6">
                             <circle cx="600" cy="220" r="8"/>
-                            <text x="600" y="245">Ouaga</text>
+                            <text x="600" y="245">Gao</text>
                         </g>
                     </svg>
                 </div>
@@ -1652,7 +1652,7 @@
                  type: 'reward',
                  severity: 'low',
                  source: 'Système de Récompenses',
-                 description: `Distribution de ${rewardData.amount} SAHEL à ${rewardData.recipient} - ${rewardData.reason}`,
+                 description: `Distribution de ${rewardData.amount} HBAR à ${rewardData.recipient} - ${rewardData.reason}`,
                  timestamp: Date.now()
              });
         }
@@ -1677,7 +1677,7 @@
                 <div class="reward-content">
                     <div class="reward-title">Récompense Distribuée</div>
                     <div class="reward-details">
-                        <div class="reward-detail"><span>Montant:</span> ${rewardData.amount} SAHEL</div>
+                        <div class="reward-detail"><span>Montant:</span> ${rewardData.amount} HBAR</div>
                         <div class="reward-detail"><span>À:</span> ${rewardData.recipient}</div>
                         <div class="reward-detail"><span>Raison:</span> ${rewardData.reason}</div>
                         <div class="reward-detail"><span>Statut:</span> ${rewardData.simulated ? 'Simulation' : 'Réussi'}</div>

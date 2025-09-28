@@ -5,8 +5,8 @@ class SimpleRewardTokenService {
     constructor() {
         this.tokenId = null;
         this.treasuryAccountId = process.env.OPERATOR_ID;
-        this.tokenSymbol = "SAHEL";
-        this.tokenName = "SAHEL Guard Reward Token";
+        this.tokenSymbol = "HBAR";
+        this.tokenName = "HBAR Reward";
         this.simulatedMode = true; // Mode simulation pour hackathon
     }
 
