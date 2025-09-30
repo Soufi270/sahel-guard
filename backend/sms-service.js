@@ -24,6 +24,12 @@ class VonageSmsService {
     // Envoi réel via Vonage
     async sendViaVonage(phoneNumber, message) {
         try {
+            // Vérification cruciale : s'assurer que le client Vonage est initialisé.
+            if (!this.vonage) {
+                console.error('❌ Tentative d\'envoi de SMS alors que le service Vonage n\'est pas initialisé.');
+                throw new Error('Service SMS Vonage non initialisé. Vérifiez les variables d\'environnement.');
+            }
+
             console.log(`📲 Tentative envoi via Vonage à ${phoneNumber}`);
             // Le numéro doit être au format E.164, mais sans le '+' pour le SDK Vonage
             const to = phoneNumber.replace('+', '');
@@ -43,7 +49,10 @@ class VonageSmsService {
             }
         } catch (error) {
             // Si l'erreur vient du SDK, elle aura une propriété 'response'
-            const errorMessage = error.response ? JSON.stringify(error.response.data) : error.message;
+            let errorMessage = error.message;
+            if (error.response && error.response.data) {
+                errorMessage = JSON.stringify(error.response.data);
+            }
             console.error('❌ Erreur envoi Vonage:', errorMessage);
             throw error;
         }
