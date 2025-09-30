@@ -1,72 +1,50 @@
-const axios = require('axios');
+const { Vonage } = require('@vonage/server-sdk');
 
-// Service SMS pour les opérateurs maliens
-class MaliSmsService {
+// Service SMS utilisant Vonage
+class VonageSmsService {
     constructor() {
-        this.clientId = process.env.ORANGE_CLIENT_ID;
-        this.clientSecret = process.env.ORANGE_CLIENT_SECRET;
-        this.senderNumber = process.env.ORANGE_SENDER_NUMBER; // Le numéro fourni par Orange
-        this.accessToken = null;
-        this.tokenExpiresAt = 0;
+        this.apiKey = process.env.VONAGE_API_KEY;
+        this.apiSecret = process.env.VONAGE_API_SECRET;
+        this.senderNumber = process.env.VONAGE_SENDER_NUMBER; // Le numéro fourni par Vonage
+        this.vonage = null;
 
-        if (this.clientId && this.clientSecret && this.senderNumber) {
+        if (this.apiKey && this.apiSecret && this.senderNumber) {
             this.isConfigured = true;
-            console.log('📱 Service SMS Orange configuré et activé.');
+            this.vonage = new Vonage({
+                apiKey: this.apiKey,
+                apiSecret: this.apiSecret
+            });
+            console.log('📱 Service SMS Vonage configuré et activé.');
         } else {
             this.isConfigured = false;
-            console.log('⚠️ Service SMS non configuré (credentials Orange manquants).');
+            console.log('⚠️ Service SMS non configuré (credentials Vonage manquants).');
         }
     }
 
-    // Obtenir un jeton d'accès auprès d'Orange
-    async getAccessToken() {
-        // Si le jeton existe et n'est pas expiré, on le réutilise
-        if (this.accessToken && Date.now() < this.tokenExpiresAt) {
-            return this.accessToken;
-        }
-
-        console.log('🔄 Obtention d\'un nouveau jeton d\'accès Orange...');
-        const credentials = Buffer.from(`${this.clientId}:${this.clientSecret}`).toString('base64');
-        const response = await axios.post('https://api.orange.com/oauth/v2/token', 'grant_type=client_credentials', {
-            headers: {
-                'Authorization': `Basic ${credentials}`,
-                'Content-Type': 'application/x-www-form-urlencoded'
-            }
-        });
-
-        this.accessToken = response.data.access_token;
-        // On garde le jeton valide pour un peu moins longtemps que sa durée de vie réelle pour être sûr
-        this.tokenExpiresAt = Date.now() + (response.data.expires_in - 60) * 1000;
-        console.log('✅ Jeton d\'accès Orange obtenu.');
-        return this.accessToken;
-    }
-
-    // Envoi réel via Orange Mali 
-    async sendViaOrange(phoneNumber, message) {
+    // Envoi réel via Vonage
+    async sendViaVonage(phoneNumber, message) {
         try {
-            const token = await this.getAccessToken();
-            console.log(`📲 Tentative envoi via Orange Mali à ${phoneNumber}`);
-
-            const senderAddress = `tel:+${this.senderNumber.replace(/\D/g, '')}`;
-            const url = `https://api.orange.com/smsmessaging/v1/outbound/${encodeURIComponent(senderAddress)}/requests`;
-
-            const body = {
-                outboundSMSMessageRequest: {
-                    address: `tel:${phoneNumber}`,
-                    senderAddress: senderAddress,
-                    outboundSMSTextMessage: {
-                        message: message
-                    }
-                }
-            };
-
-            await axios.post(url, body, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-
-            return { success: true, provider: 'orange', simulated: false };
+            console.log(`📲 Tentative envoi via Vonage à ${phoneNumber}`);
+            // Le numéro doit être au format E.164, mais sans le '+' pour le SDK Vonage
+            const to = phoneNumber.replace('+', '');
+            const from = this.senderNumber;
+            const text = message;
+            
+            const response = await this.vonage.sms.send({ to, from, text });
+            
+            if (response.messages[0].status === '0') {
+                console.log(`✅ SMS envoyé avec succès à ${to}`);
+                return { success: true, provider: 'vonage', simulated: false };
+            } else {
+                const errorMessage = `Échec envoi SMS: ${response.messages[0]['error-text']}`;
+                console.error(`❌ ${errorMessage}`);
+                // Lancer une erreur pour que le bloc catch la gère
+                throw new Error(errorMessage);
+            }
         } catch (error) {
-            console.error('❌ Erreur envoi Orange:', error.response ? error.response.data : error.message);
+            // Si l'erreur vient du SDK, elle aura une propriété 'response'
+            const errorMessage = error.response ? JSON.stringify(error.response.data) : error.message;
+            console.error('❌ Erreur envoi Vonage:', errorMessage);
             throw error;
         }
     }
@@ -90,7 +68,7 @@ class MaliSmsService {
             try {
                 // Formatage du numéro pour le Mali
                 const formattedNumber = this.formatMaliPhoneNumber(phoneNumber);
-                const result = await this.sendViaOrange(formattedNumber, message);
+                const result = await this.sendViaVonage(formattedNumber, message);
                 results.push({ phoneNumber, success: true, ...result });
             } catch (error) {
                 console.error(`❌ Échec envoi à ${phoneNumber}:`, error.message);
@@ -159,12 +137,12 @@ let smsService = null;
 
 function getSmsService() {
     if (!smsService) {
-        smsService = new MaliSmsService();
+        smsService = new VonageSmsService();
     }
     return smsService;
 }
 
 module.exports = {
     getSmsService,
-    MaliSmsService
+    VonageSmsService
 };
