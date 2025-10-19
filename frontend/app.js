@@ -245,6 +245,76 @@ document.addEventListener('DOMContentLoaded', () => {
     loadInitialData();
     
     updateStats();
+
+    // --- Logique de Navigation du Menu Latéral ---
+    const mainContent = document.querySelector('main');
+    const settingsSection = document.getElementById('settings-section');
+    const allMenuItems = document.querySelectorAll('.sidebar-menu .menu-item');
+
+    function setActiveMenuItem(clickedItem) {
+        allMenuItems.forEach(item => item.classList.remove('active'));
+        if (clickedItem) {
+            clickedItem.classList.add('active');
+        }
+    }
+
+    function scrollToSection(sectionId) {
+        const section = document.getElementById(sectionId);
+        if (section) {
+            mainContent.style.display = 'block';
+            settingsSection.style.display = 'none';
+            section.scrollIntoView({ behavior: 'smooth' });
+        }
+    }
+
+    const menuMapping = {
+        'menu-alerts': 'alert-section',
+        'menu-hcs': 'hcs-section',
+        'menu-signatures': 'signatures-section',
+        'menu-rewards': 'rewards-section',
+        'menu-sms': 'sms-section',
+        'menu-map': 'map-section'
+    };
+
+    Object.keys(menuMapping).forEach(menuId => {
+        const menuItem = document.getElementById(menuId);
+        if (menuItem) {
+            menuItem.addEventListener('click', (e) => {
+                e.preventDefault();
+                setActiveMenuItem(menuItem);
+                scrollToSection(menuMapping[menuId]);
+            });
+        }
+    });
+
+    // Cas spécial pour le "Tableau de bord" (retour en haut)
+    const dashboardMenu = document.querySelector('.sidebar-menu .menu-item:first-child');
+    if (dashboardMenu) {
+        dashboardMenu.addEventListener('click', (e) => {
+            e.preventDefault();
+            setActiveMenuItem(dashboardMenu);
+            mainContent.style.display = 'block';
+            settingsSection.style.display = 'none';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+    }
+
+    // Cas spécial pour les "Paramètres"
+    const settingsMenu = document.getElementById('menu-settings');
+    if (settingsMenu) {
+        settingsMenu.addEventListener('click', (e) => {
+            e.preventDefault();
+            setActiveMenuItem(settingsMenu);
+            mainContent.style.display = 'none';
+            settingsSection.style.display = 'block';
+            settingsSection.scrollIntoView({ behavior: 'smooth' });
+        });
+    }
+
+    // Activer le premier item du menu par défaut
+    if (dashboardMenu) {
+        dashboardMenu.classList.add('active');
+    }
 });
 
 // Gestion des erreurs globales
