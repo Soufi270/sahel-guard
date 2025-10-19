@@ -189,7 +189,7 @@ app.post('/api/analyze', async (req, res) => {
         }
 
         // --- RESTAURATION DE LA LOGIQUE DE DÉCISION INITIALE ---
-        const aiResult = await anomalyDetector.detectAnomaly(networkData);
+        const aiResult = await anomalyDetector.analyzeAndPredict(networkData);
         const businessRulesResult = checkBusinessRules(networkData);
         
         // Décision finale
@@ -203,15 +203,15 @@ app.post('/api/analyze', async (req, res) => {
 
         // Si menace détectée, envoyer une alerte HCS (logique réactive existante)
         if (finalDecision.isThreat) {
-            const severity = businessRulesResult.length > 0 ? businessRulesResult[0].severity : (aiResult.confidence > 90 ? 'high' : 'medium');
-            const description = businessRulesResult.length > 0 ? businessRulesResult[0].rule : `Anomalie IA détectée avec confiance de ${aiResult.confidence}%`;
+            const severity = businessRulesResult.length > 0 ? businessRulesResult[0].severity : (aiResult.confidence > 0.9 ? 'high' : 'medium');
+            const description = businessRulesResult.length > 0 ? businessRulesResult[0].rule : (aiResult.prediction.isPredicted ? aiResult.prediction.reason : "Anomalie détectée par l'IA");
 
             const alertData = {
                 type: 'auto-detected-threat',
                 severity: severity,
                 source: networkData.sourceIP || 'Inconnue',
                 description: description,
-                confidence: aiResult.confidence,
+                confidence: aiResult.confidence || (aiResult.prediction.predictionConfidence / 100),
                 location: 'Mali',
                 aiFeatures: aiResult.features
             };
