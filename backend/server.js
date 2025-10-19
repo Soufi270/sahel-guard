@@ -66,6 +66,9 @@ const rewardsLogHistory = [];
 app.use(express.static(path.join(__dirname, '../frontend')));
 app.use(express.json());
 
+// --- Déplacer la logique de démarrage du serveur dans la fonction d'initialisation ---
+// server.listen(PORT, () => { ... }); sera appelé à la fin de initializeServices
+
 // Initialisation de tous les services
 (async function initializeServices() {
     try {
@@ -98,9 +101,16 @@ app.use(express.json());
 
         // Le serveur est maintenant prêt à accepter des connexions et à démarrer la simulation
         isServerReady = true;
+
+        // Démarrage du serveur UNIQUEMENT après une initialisation réussie
+        server.listen(PORT, () => {
+            console.log(`🚀 Serveur démarré et prêt sur http://localhost:${PORT}`);
+            console.log(`📋 Topic ID Alertes: ${getTopicId() ? getTopicId().toString() : "Non défini"}`);
+        });
         
     } catch (error) {
-        console.error('❌ Erreur initialisation services:', error);
+        console.error('❌ ERREUR CRITIQUE: Échec de l\'initialisation des services. Le serveur ne démarrera pas.', error);
+        process.exit(1); // Arrête le processus si l'initialisation échoue
     }
 })();
 
@@ -396,10 +406,4 @@ io.on('connection', (socket) => {
     socket.on('disconnect', () => {
         console.log('Client déconnecté:', socket.id);
     });
-});
-
-// Démarrage du serveur
-server.listen(PORT, () => {
-    console.log(`🚀 Serveur démarré sur http://localhost:${PORT}`);
-    console.log(`📋 Topic ID: ${getTopicId() ? getTopicId().toString() : "Non encore créé"}`);
 });
