@@ -240,6 +240,13 @@ app.post('/api/analyze', async (req, res) => {
             // Mettre à jour le statut du capteur sur le front-end
             if (networkData.sensorId) {
                 io.emit('sensor-status-update', { sensorId: networkData.sensorId, status: 'alert' });
+                
+                // Événement pour l'animation du flux de menace sur la carte
+                io.emit('threat-flow', {
+                    sensorId: networkData.sensorId,
+                    severity: alertData.severity
+                });
+
                 // Mettre à jour la réputation et notifier le client
                 const reputation = reputationService.addXpForAlert(networkData.sensorId, alertData);
                 io.emit('reputation-updated', { sensorId: networkData.sensorId, reputation });
