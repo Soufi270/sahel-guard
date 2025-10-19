@@ -26,8 +26,8 @@ class VonageSmsService {
         // La vérification est déjà faite dans sendAlertSms via isConfigured
         try {
             console.log(`📲 Tentative envoi via Vonage à ${phoneNumber}`);
-            // Le numéro doit être au format E.164 complet (avec le '+') pour le SDK Vonage.
-            const to = phoneNumber;
+            // Le numéro doit être au format E.164, mais sans le '+' pour le SDK Vonage
+            const to = phoneNumber.replace('+', '');
             const from = this.senderNumber;
             const text = message;
             

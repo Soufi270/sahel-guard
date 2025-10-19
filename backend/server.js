@@ -103,15 +103,8 @@ app.use(express.json());
         // Le serveur est maintenant prêt à accepter des connexions et à démarrer la simulation
         isServerReady = true;
 
-        // Démarrage du serveur UNIQUEMENT après une initialisation réussie
-        server.listen(PORT, () => {
-            console.log(`🚀 Serveur démarré et prêt sur http://localhost:${PORT}`);
-            console.log(`📋 Topic ID Alertes: ${getTopicId() ? getTopicId().toString() : "Non défini"}`);
-        });
-        
     } catch (error) {
-        console.error('❌ ERREUR CRITIQUE: Échec de l\'initialisation des services. Le serveur ne démarrera pas.', error);
-        process.exit(1); // Arrête le processus si l'initialisation échoue
+        console.error('❌ Erreur initialisation services:', error);
     }
 })();
 
@@ -192,28 +185,32 @@ app.post('/api/analyze', async (req, res) => {
             });
         }
 
-        // Utilisation de la méthode du module d'IA avancé
-        const analysisResult = await anomalyDetector.analyzeAndPredict(networkData);
+        // --- RESTAURATION DE LA LOGIQUE DE DÉCISION INITIALE ---
+        const aiResult = await anomalyDetector.detectAnomaly(networkData);
+        const businessRulesResult = checkBusinessRules(networkData);
         
         // Décision finale
         let finalDecision = {
-            isThreat: analysisResult.isThreat || analysisResult.prediction.isPredicted,
-            aiAnalysis: analysisResult,
-            businessRules: [], // Le module avancé intègre déjà cette logique
+            isThreat: aiResult.isAnomaly || businessRulesResult.length > 0,
+            aiAnalysis: aiResult,
+            businessRules: businessRulesResult,
             timestamp: Date.now(),
             networkData: networkData
         };
 
         // Si menace détectée, envoyer une alerte HCS (logique réactive existante)
         if (finalDecision.isThreat) {
+            const severity = businessRulesResult.length > 0 ? businessRulesResult[0].severity : (aiResult.confidence > 90 ? 'high' : 'medium');
+            const description = businessRulesResult.length > 0 ? businessRulesResult[0].rule : `Anomalie IA détectée avec confiance de ${aiResult.confidence}%`;
+
             const alertData = {
-                type: analysisResult.prediction.predictionType || 'auto-detected-threat',
-                severity: analysisResult.confidence > 0.9 ? 'high' : (analysisResult.prediction.predictionConfidence > 80 ? 'high' : 'medium'),
+                type: 'auto-detected-threat',
+                severity: severity,
                 source: networkData.sourceIP || 'Inconnue',
-                description: analysisResult.prediction.isPredicted ? analysisResult.prediction.reason : analysisResult.reason,
-                confidence: analysisResult.confidence || (analysisResult.prediction.predictionConfidence / 100),
+                description: description,
+                confidence: aiResult.confidence,
                 location: 'Mali',
-                aiFeatures: analysisResult.features
+                aiFeatures: aiResult.features
             };
 
             const result = await sendHCSMessage(alertData);
