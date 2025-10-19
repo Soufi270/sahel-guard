@@ -4,7 +4,7 @@ const fs = require('fs');
 const socketIo = require('socket.io');
 const path = require('path');
 const { sendHCSMessage, getTopicId, createHCSTopic, createSignatureTopic, sendSignatureMessage } = require("./hedera-config");
-const { getAnomalyDetector, checkBusinessRules } = require('./ai-detection-simple');
+const { getAnomalyDetector } = require('./ai-detection-advanced'); // Correction du nom de fichier
 const reputationService = require('./sensor-reputation');
 const axios = require('axios');
 const { getSmsService } = require('./sms-service');
@@ -73,10 +73,11 @@ app.use(express.json());
         console.log('🔄 Initialisation des services...');
 
         // Créer le Topic HCS au démarrage pour qu'il soit toujours disponible
-        await createHCSTopic();
+        const alertTopicId = await createHCSTopic();
         const topicId = getTopicId();
         // Créer le Topic pour les signatures
-        await createSignatureTopic();
+        const signatureTopicId = await createSignatureTopic();
+        console.log(`✅ Topics Hedera initialisés: Alertes (${alertTopicId}), Signatures (${signatureTopicId})`);
 
         if (topicId) {
             // Diffuser l'info du topic à tous les clients dès qu'elle est prête
@@ -180,14 +181,14 @@ app.post('/api/analyze', async (req, res) => {
             });
         }
 
-        const aiResult = await anomalyDetector.detectAnomaly(networkData);
-        const businessRulesResult = checkBusinessRules(networkData);
+        // Utilisation de la méthode du module d'IA avancé
+        const analysisResult = await anomalyDetector.analyzeAndPredict(networkData);
         
         // Décision finale
         let finalDecision = {
-            isThreat: aiResult.isAnomaly || businessRulesResult.length > 0,
-            aiAnalysis: aiResult,
-            businessRules: businessRulesResult,
+            isThreat: analysisResult.isThreat || analysisResult.prediction.isPredicted,
+            aiAnalysis: analysisResult,
+            businessRules: [], // Le module avancé intègre déjà cette logique
             timestamp: Date.now(),
             networkData: networkData
         };
@@ -195,13 +196,13 @@ app.post('/api/analyze', async (req, res) => {
         // Si menace détectée, envoyer une alerte HCS (logique réactive existante)
         if (finalDecision.isThreat) {
             const alertData = {
-                type: 'auto-detected-threat',
-                severity: businessRulesResult.length > 0 ? businessRulesResult[0].severity : (aiResult.confidence > 90 ? 'high' : 'medium'),
+                type: analysisResult.prediction.predictionType || 'auto-detected-threat',
+                severity: analysisResult.confidence > 0.9 ? 'high' : (analysisResult.prediction.predictionConfidence > 80 ? 'high' : 'medium'),
                 source: networkData.sourceIP || 'Inconnue',
-                description: `Menace détectée: ${aiResult.isAnomaly ? 'Anomalie IA' : 'Règle métier'} - ${businessRulesResult.map(r => r.rule).join(', ')}`,
-                confidence: aiResult.confidence,
+                description: analysisResult.prediction.isPredicted ? analysisResult.prediction.reason : analysisResult.reason,
+                confidence: analysisResult.confidence || (analysisResult.prediction.predictionConfidence / 100),
                 location: 'Mali',
-                aiFeatures: aiResult.features
+                aiFeatures: analysisResult.features
             };
 
             const result = await sendHCSMessage(alertData);
