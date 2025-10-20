@@ -37,10 +37,10 @@ class VonageSmsService {
                 console.log(`✅ SMS envoyé avec succès à ${to}`);
                 return { success: true, provider: 'vonage', simulated: false };
             } else {
-                const errorMessage = `Échec envoi SMS: ${response.messages[0]['error-text']}`;
+                // Affiche le message d'erreur spécifique retourné par l'API Vonage
+                const errorMessage = `Échec envoi SMS (${response.messages[0].status}): ${response.messages[0]['error-text']}`;
                 console.error(`❌ ${errorMessage}`);
-                // Lancer une erreur pour que le bloc catch la gère
-                throw new Error(errorMessage);
+                throw new Error(errorMessage); // Lancer une erreur pour que le bloc catch la gère
             }
         } catch (error) {
             // Si l'erreur vient du SDK, elle aura une propriété 'response'
