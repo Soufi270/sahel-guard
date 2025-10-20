@@ -109,27 +109,15 @@ class SmsManager {
     
     // Formatage du message d'alerte
     formatAlertMessage(alertData) {
-        const emojis = {
-            high: '🚨',
-            critical: '🔥',
-            medium: '⚠️',
-            low: '📋'
-        };
+        // Message court et simple pour maximiser la délivrabilité.
+        // On retire les emojis et les informations non essentielles.
+        const level = alertData.severity.toUpperCase();
+        const type = alertData.type;
+        const source = alertData.source;
+        // Tronquer la description pour s'assurer que le message reste court
+        const description = alertData.description.substring(0, 50);
 
-        const emoji = emojis[alertData.severity] || '⚠️';
-        
-        return `${emoji} ALERTE SAHEL GUARD ${emoji}
-        
-Type: ${alertData.type}
-Niveau: ${alertData.severity.toUpperCase()}
-Source: ${alertData.source}
-Lieu: ${alertData.location}
-
-${alertData.description}
-
-🕒 ${new Date().toLocaleString('fr-FR')}
-
-➡️ Contacter l'admin réseau si nécessaire`;
+        return `ALERTE SAHEL GUARD (${level}): ${type} depuis ${source}. Desc: ${description}...`;
     }
 
     // Formatage des numéros maliens
