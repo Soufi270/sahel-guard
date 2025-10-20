@@ -56,13 +56,13 @@ class VonageSmsService {
     // Méthode principale d'envoi SMS
     async sendAlertSms(alertData, phoneNumbers) {
         if (!this.isConfigured) {
-            console.log('⚠️ Service SMS désactivé');
-            return { sent: 0, skipped: phoneNumbers.length };
+            console.log('⚠️ Service SMS désactivé, aucun envoi.');
+            return phoneNumbers.map(phoneNumber => ({ phoneNumber, success: false, error: 'Service SMS désactivé' }));
         }
 
         if (!phoneNumbers || phoneNumbers.length === 0) {
             console.log('⚠️ Aucun numéro à notifier');
-            return { sent: 0, skipped: 0 };
+            return [];
         }
 
         const message = this.formatAlertMessage(alertData);
