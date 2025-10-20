@@ -48,9 +48,8 @@ class VonageSmsService {
             if (error.response && error.response.data) {
                 errorMessage = JSON.stringify(error.response.data);
             }
-            // On relance une erreur qui sera capturée par le SmsManager
-            // et qui contiendra le message détaillé.
-            throw new Error(errorMessage);
+            // On relance une nouvelle erreur pour que le message soit plus clair dans les logs de niveau supérieur.
+            throw new Error(`Erreur API Vonage: ${errorMessage}`);
         }
     }
 }
