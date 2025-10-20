@@ -135,16 +135,6 @@ function simulateNetworkTraffic() {
         .catch(error => console.error('Erreur de simulation interne:', error.message));
 }
 
-// Démarrer la simulation automatique une fois que le serveur est prêt
-let simulationInterval = null;
-io.on('connection', (socket) => {
-    // Si le serveur est prêt et qu'un client se connecte, on démarre la simulation
-    if (isServerReady && !simulationInterval) {
-        console.log('✅ Premier client connecté et serveur prêt. Démarrage de la simulation.');
-        simulationInterval = setInterval(simulateNetworkTraffic, 5000); // Ralentissement de 3s à 5s
-    }
-});
-
 // Route pour envoyer une alerte manuellement
 app.post('/api/alert', async (req, res) => {
     try {
@@ -391,8 +381,16 @@ app.post('/api/reward', async (req, res) => {
     }
 });
 
+// --- Gestion centralisée des connexions WebSocket ---
+let simulationInterval = null;
 // Gestion des connexions WebSocket
 io.on('connection', (socket) => {
+    // Démarrer la simulation automatique une fois que le serveur est prêt et qu'un premier client se connecte
+    if (isServerReady && !simulationInterval) {
+        console.log('✅ Premier client connecté et serveur prêt. Démarrage de la simulation.');
+        simulationInterval = setInterval(simulateNetworkTraffic, 5000);
+    }
+
     console.log('🔗 Nouveau client connecté:', socket.id);
 
     io.emit('server-ready'); // Informer le client que le serveur est prêt
@@ -405,9 +403,6 @@ io.on('connection', (socket) => {
 
     // Envoyer l'historique des logs au nouveau client
     socket.emit('log-history', hcsLogHistory);
-
-    // Envoyer l'historique des signatures
-    socket.emit('signature-log-history', signatureLogHistory);
 
     // Envoyer l'historique des signatures
     socket.emit('signature-log-history', signatureLogHistory);
