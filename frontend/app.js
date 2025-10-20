@@ -326,6 +326,16 @@ document.addEventListener('DOMContentLoaded', () => {
         settingsSection.style.display = 'block';
     });
 
+    // --- Logique pour le bouton "Simuler une Alerte" dans le header ---
+    const newAlertBtn = document.getElementById('new-alert-btn');
+    const formPanel = document.getElementById('form-panel');
+
+    if (newAlertBtn && formPanel) {
+        newAlertBtn.addEventListener('click', (e) => {
+            e.preventDefault(); // Empêche tout comportement par défaut du bouton
+            formPanel.scrollIntoView({ behavior: 'smooth' }); // Fait défiler jusqu'au formulaire
+        });
+    }
 });
 
 // --- Logique de visualisation des flux de menaces sur la carte ---
