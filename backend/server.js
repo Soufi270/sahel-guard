@@ -189,7 +189,15 @@ app.post('/api/analyze', async (req, res) => {
         }
 
         // --- RESTAURATION DE LA LOGIQUE DE DÉCISION INITIALE ---
-        const aiResult = await anomalyDetector.analyzeAndPredict(networkData);
+        let aiResult;
+        try {
+            aiResult = await anomalyDetector.analyzeAndPredict(networkData);
+        } catch (aiError) {
+            console.error("❌ Erreur critique du service IA:", aiError.message);
+            // En cas de panne de l'IA, on se fie uniquement aux règles métier
+            aiResult = { isAnomaly: false, confidence: 0, features: {}, prediction: {} };
+        }
+
         const businessRulesResult = checkBusinessRules(networkData);
         
         // Décision finale
@@ -216,24 +224,31 @@ app.post('/api/analyze', async (req, res) => {
                 aiFeatures: aiResult.features
             };
 
-            const result = await sendHCSMessage(alertData);
+            // --- Journalisation résiliente sur Hedera ---
+            let logEntry = { ...alertData, id: `local-${Date.now()}` }; // ID local par défaut
+            try {
+                const result = await sendHCSMessage(alertData);
+                logEntry.id = result.messageId; // Remplacer par l'ID HCS si succès
 
-            // Créer et envoyer une signature de menace
-            const signature = {
-                threatType: alertData.type,
-                severity: alertData.severity,
-                sourcePattern: networkData.sourceIP.split('.').slice(0, 2).join('.') + '.*.*',
-            };
-            const signatureLogEntry = await sendSignatureMessage(signature);
-            signatureLogHistory.unshift(signatureLogEntry);
-            if (signatureLogHistory.length > MAX_LOG_HISTORY) signatureLogHistory.pop();
-            io.emit('new-signature', signatureLogEntry);
+                // Créer et envoyer une signature de menace
+                const signature = {
+                    threatType: alertData.type,
+                    severity: alertData.severity,
+                    sourcePattern: networkData.sourceIP.split('.').slice(0, 2).join('.') + '.*.*',
+                };
+                const signatureLogEntry = await sendSignatureMessage(signature);
+                signatureLogHistory.unshift(signatureLogEntry);
+                if (signatureLogHistory.length > MAX_LOG_HISTORY) signatureLogHistory.pop();
+                io.emit('new-signature', signatureLogEntry);
 
-            // Ajouter au log et à l'historique
-            const logEntry = { ...alertData, id: result.messageId };
+            } catch (hederaError) {
+                console.error("❌ Échec de la journalisation sur Hedera:", hederaError.message);
+                // L'alerte continue d'être traitée même si Hedera est en panne.
+            }
+
+            // L'alerte est diffusée sur le front-end, que Hedera ait fonctionné ou non.
             hcsLogHistory.unshift(logEntry);
             if (hcsLogHistory.length > MAX_LOG_HISTORY) hcsLogHistory.pop();
-
             io.emit('new-alert', logEntry);
             io.emit('hcs-log-entry', logEntry); // Événement dédié pour le journal HCS
 
