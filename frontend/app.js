@@ -107,47 +107,66 @@ function addAlertToUI(alertData, animate = true) {
     }
     
     // Créer un nouvel élément d'alerte
-    const alertElement = document.createElement('li');
-    alertElement.className = `alert ${alertData.severity}`;
+    const alertElement = document.createElement('div');
+    alertElement.className = `alert-item ${alertData.severity} ${animate ? 'slide-in' : ''}`;
     
     // Formater la date
     const date = new Date(alertData.timestamp || Date.now());
     const formattedDate = `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
     
     // Déterminer l'icône et le titre en fonction du type
-    let icon, title;
+    let icon, title, bgColor, iconColor;
     switch(alertData.type) {
         case 'phishing':
-            icon = '📧';
+            icon = 'fa-envelope';
             title = 'Tentative de Phishing';
+            bgColor = 'rgba(231, 76, 60, 0.2)';
+            iconColor = '#e74c3c';
             break;
         case 'ddos':
-            icon = '🌐';
+            icon = 'fa-globe';
             title = 'Attaque DDoS';
+            bgColor = 'rgba(230, 126, 34, 0.2)';
+            iconColor = '#e67e22';
             break;
         case 'intrusion':
-            icon = '🚨'; // Correction de l'icône
+            icon = 'fa-shield-alt';
             title = 'Intrusion Réseau';
+            bgColor = 'rgba(241, 196, 15, 0.2)';
+            iconColor = '#f1c40f';
             break;
         case 'malware':
-            icon = '🦠';
+            icon = 'fa-virus';
             title = 'Malware Détecté';
+            bgColor = 'rgba(155, 89, 182, 0.2)';
+            iconColor = '#9b59b6';
             break;
         case 'reward':
-            icon = '🎉';
+            icon = 'fa-gift';
             title = 'Récompense Distribuée';
+            bgColor = 'rgba(46, 204, 113, 0.2)';
+            iconColor = '#2ecc71';
             break;
         default:
-            icon = '⚠️';
+            icon = 'fa-exclamation-triangle';
             title = 'Alerte de Sécurité';
+            bgColor = 'rgba(52, 152, 219, 0.2)';
+            iconColor = '#3498db';
     }
     
     alertElement.innerHTML = `
-        <h3>${icon} ${title}</h3>
-        <p><strong>Source:</strong> ${alertData.source}</p>
-        <p><strong>Niveau:</strong> ${alertData.severity}</p>
-        <p>${alertData.description || 'Aucune description fournie'}</p>
-        <p class="timestamp">${formattedDate}</p>
+        <div class="alert-icon" style="background: ${bgColor}; color: ${iconColor};">
+            <i class="fas ${icon}"></i>
+        </div>
+        <div class="alert-content">
+            <div class="alert-title">${title}</div>
+            <div class="alert-desc">${alertData.description || 'Aucune description fournie'}</div>
+            <div class="alert-meta">
+                <span class="alert-time"><i class="fas fa-clock"></i> ${formattedDate}</span>
+                <span class="alert-severity"><i class="fas fa-signal"></i> Niveau: ${alertData.severity}</span>
+                ${alertData.source ? `<span class="alert-source"><i class="fas fa-network-wired"></i> Source: ${alertData.source}</span>` : ''}
+            </div>
+        </div>
     `;
     
     // Ajouter l'alerte en haut de la liste
@@ -198,15 +217,6 @@ function handleRewardNotification(rewardData) {
             rewardsListElement.removeChild(rewardsListElement.lastChild);
         }
     }
-    
-    // Ajouter également comme une alerte normale
-    addAlertToUI({
-        type: 'reward',
-        severity: 'low',
-        source: 'Système de Récompenses',
-        description: `Distribution de ${rewardData.amount} SAHEL à ${rewardData.recipient} - ${rewardData.reason}`,
-        timestamp: Date.now()
-    });
 }
 
 // Chargement initial: récupérer les infos du topic et du token
