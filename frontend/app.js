@@ -19,6 +19,9 @@ const rewardsCountElement = document.getElementById('rewards-count');
 let totalAlerts = 0;
 let totalRewards = 0;
 
+// Store pour le statut des capteurs
+let sensorStatus = {};
+
 // Écoute des événements WebSocket
 socket.on('connect', () => {
     console.log('Connecté au serveur');
@@ -58,6 +61,11 @@ socket.on('reward-distributed', (rewardData) => {
 socket.on('threat-flow', (flowData) => {
     console.log('🌊 Nouveau flux de menace détecté:', flowData);
     drawThreatFlow(flowData);
+});
+
+socket.on('sensor-status-update', (data) => {
+    console.log('🛰️ Statut capteur mis à jour:', data);
+    updateSensorStatus(data.sensorId, data.status);
 });
 
 // Gestion de l'envoi du formulaire
@@ -285,6 +293,19 @@ window.testReward = function() {
     };
     handleRewardNotification(testData);
 };
+
+function updateSensorStatus(sensorId, status) {
+    sensorStatus[sensorId] = status;
+    const sensorElement = document.querySelector(`.sensor-point[data-id="${sensorId}"]`);
+    if (sensorElement) {
+        sensorElement.classList.remove('status-active', 'status-alert');
+        if (status === 'active') {
+            sensorElement.classList.add('status-active');
+        } else if (status === 'alert') {
+            sensorElement.classList.add('status-alert');
+        }
+    }
+}
 
 // --- Logique de Navigation du Menu Latéral (CORRIGÉ) ---
 document.addEventListener('DOMContentLoaded', () => {
