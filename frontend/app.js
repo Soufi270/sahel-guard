@@ -61,6 +61,26 @@ socket.on('reward-distributed', (rewardData) => {
     handleRewardNotification(rewardData);
 });
 
+socket.on('hcs-log-entry', (logData) => {
+    addHcsLogToUI(logData);
+});
+
+socket.on('new-signature', (signatureData) => {
+    addSignatureToUI(signatureData);
+});
+
+socket.on('log-history', (history) => {
+    const list = document.getElementById('hcs-log-list');
+    if (list) list.innerHTML = '';
+    history.forEach(log => addHcsLogToUI(log, false));
+});
+
+socket.on('signature-log-history', (history) => {
+    const list = document.getElementById('signatures-log-list');
+    if (list) list.innerHTML = '';
+    history.forEach(log => addSignatureToUI(log, false));
+});
+
 socket.on('threat-flow', (flowData) => {
     console.log('🌊 Nouveau flux de menace détecté:', flowData);
     drawThreatFlow(flowData);
@@ -204,37 +224,35 @@ function addAlertToUI(alertData, animate = true) {
 
 // Fonction pour gérer les notifications de récompense
 function handleRewardNotification(rewardData) {
-    totalRewards++;
+    // Utiliser le montant réel pour le total
+    totalRewards += rewardData.amount;
     updateStats();
     
-    if (rewardsCountElement) {
-        rewardsCountElement.textContent = totalRewards;
-    }
-    
-    // Créer un élément de récompense
-    const rewardElement = document.createElement('li');
-    rewardElement.className = 'reward-item';
+    // Créer un élément de récompense avec le nouveau style
+    const rewardElement = document.createElement('div');
+    rewardElement.className = 'reward-item slide-in';
     
     rewardElement.innerHTML = `
-        <h4>🎉 Récompense Distribuée</h4>
-        <div class="reward-details">
-            <div><span>Montant:</span> ${rewardData.amount} SAHEL</div>
-            <div><span>À:</span> ${rewardData.recipient}</div>
-            <div><span>Raison:</span> ${rewardData.reason}</div>
-            <div><span>Statut:</span> ${rewardData.simulated ? 'Simulation' : 'Réussi'}</div>
+        <div class="reward-icon">
+            <i class="fas fa-coins"></i>
         </div>
-        <p class="timestamp">${new Date().toLocaleString('fr-FR')}</p>
+        <div class="reward-content">
+            <div class="reward-title">Récompense Distribuée</div>
+            <div class="reward-details">
+                <div class="reward-detail"><span>Montant:</span> ${rewardData.amount} HBAR</div>
+                <div class="reward-detail"><span>À:</span> ${rewardData.recipient}</div>
+                <div class="reward-detail"><span>Raison:</span> ${rewardData.reason}</div>
+                <div class="reward-detail"><span>Statut:</span> ${rewardData.simulated ? 'Simulation' : 'Réussi'}</div>
+            </div>
+            <div class="alert-meta">
+                <span class="alert-time"><i class="fas fa-clock"></i> ${new Date().toLocaleString('fr-FR')}</span>
+            </div>
+        </div>
     `;
     
     // Ajouter à la liste des récompenses
-    if (noRewardsElement) {
-        noRewardsElement.style.display = 'none';
-    }
-    
     if (rewardsListElement) {
         rewardsListElement.insertBefore(rewardElement, rewardsListElement.firstChild);
-        
-        // Limiter à 10 récompenses affichées
         if (rewardsListElement.children.length > 10) {
             rewardsListElement.removeChild(rewardsListElement.lastChild);
         }
@@ -290,10 +308,10 @@ function updateStats() {
         totalAlertsElement.textContent = totalAlerts;
     }
     if (totalRewardsElement) {
-        totalRewardsElement.textContent = totalRewards;
+        totalRewardsElement.textContent = Math.round(totalRewards);
     }
     if (rewardsCountElement) {
-        rewardsCountElement.textContent = totalRewards;
+        rewardsCountElement.textContent = Math.round(totalRewards);
     }
 }
 
@@ -515,4 +533,39 @@ function updateSensorReputationVisual(sensorId, color) {
         if (!sensorElement.parentElement.classList.contains('status-alert'))
             sensorElement.style.fill = color;
     }
+}
+
+function addHcsLogToUI(logData, animate = true) {
+    const list = document.getElementById('hcs-log-list');
+    if (!list) return;
+
+    // Vider le message d'initialisation
+    if (list.children.length === 1 && list.firstChild.textContent?.includes('Initialisation')) {
+        list.innerHTML = '';
+    }
+
+    const item = document.createElement('div');
+    item.className = `hcs-log-item ${animate ? 'slide-in' : ''}`;
+    const formattedDate = new Date(logData.timestamp || Date.now()).toLocaleTimeString('fr-FR');
+    const message = JSON.stringify({ type: logData.type, severity: logData.severity, source: logData.source });
+    item.innerHTML = `<span class="log-time">[${formattedDate}]</span> <span class="log-type">${logData.type}</span> <span class="log-message">${message}</span>`;
+    list.insertBefore(item, list.firstChild);
+    if (list.children.length > 50) list.removeChild(list.lastChild);
+}
+
+function addSignatureToUI(signatureData, animate = true) {
+    const list = document.getElementById('signatures-log-list');
+    if (!list) return;
+
+    if (list.children.length === 1 && list.firstChild.textContent?.includes('Initialisation')) {
+        list.innerHTML = '';
+    }
+
+    const item = document.createElement('div');
+    item.className = `hcs-log-item ${animate ? 'slide-in' : ''}`;
+    const formattedDate = new Date(signatureData.timestamp || Date.now()).toLocaleTimeString('fr-FR');
+    const message = JSON.stringify({ type: signatureData.threatType, pattern: signatureData.sourcePattern });
+    item.innerHTML = `<span class="log-time">[${formattedDate}]</span> <span class="log-type">NOUVELLE SIGNATURE</span> <span class="log-message">${message}</span>`;
+    list.insertBefore(item, list.firstChild);
+    if (list.children.length > 50) list.removeChild(list.lastChild);
 }
