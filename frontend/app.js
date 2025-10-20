@@ -22,6 +22,9 @@ let totalRewards = 0;
 // Store pour le statut des capteurs
 let sensorStatus = {};
 
+// Store pour la réputation des capteurs
+const sensorReputations = new Map();
+
 // Écoute des événements WebSocket
 socket.on('connect', () => {
     console.log('Connecté au serveur');
@@ -66,6 +69,17 @@ socket.on('threat-flow', (flowData) => {
 socket.on('sensor-status-update', (data) => {
     console.log('🛰️ Statut capteur mis à jour:', data);
     updateSensorStatus(data.sensorId, data.status);
+});
+
+socket.on('reputations-init', (reputations) => {
+    console.log('Réputations initiales reçues:', reputations);
+    reputations.forEach(rep => sensorReputations.set(rep.id.toString(), rep));
+});
+
+socket.on('reputation-updated', (data) => {
+    console.log('Réputation mise à jour:', data);
+    sensorReputations.set(data.sensorId.toString(), data.reputation);
+    updateSensorReputationVisual(data.sensorId, data.reputation.color);
 });
 
 // Gestion de l'envoi du formulaire
@@ -367,6 +381,64 @@ document.addEventListener('DOMContentLoaded', () => {
             formPanel.scrollIntoView({ behavior: 'smooth' }); // Fait défiler jusqu'au formulaire
         });
     }
+
+    // --- Logique pour la modale des capteurs ---
+    const modal = document.getElementById('sensor-modal');
+    const modalCloseBtn = document.querySelector('.close-button');
+    const sensorPoints = document.querySelectorAll('.sensor-point');
+
+    sensorPoints.forEach(point => {
+        point.addEventListener('click', () => {
+            const sensorId = point.getAttribute('data-id');
+            const location = point.getAttribute('data-location');
+            const ip = point.getAttribute('data-ip');
+            const reputation = sensorReputations.get(sensorId) || { xp: 0, level: 'Bronze', alerts: 0 };
+
+            document.getElementById('modal-title').innerText = `Détails du Capteur - ${location}`;
+            const modalBody = document.getElementById('modal-body');
+            modalBody.innerHTML = `
+                <div class="modal-grid">
+                    <div class="modal-item">
+                        <span class="modal-item-label">ID du Capteur</span>
+                        <span class="modal-item-value">${sensorId}</span>
+                    </div>
+                    <div class="modal-item">
+                        <span class="modal-item-label">Adresse IP</span>
+                        <span class="modal-item-value">${ip}</span>
+                    </div>
+                    <div class="modal-item">
+                        <span class="modal-item-label">Niveau de Réputation</span>
+                        <span class="modal-item-value" style="color: ${reputation.color || '#fff'}">${reputation.level}</span>
+                    </div>
+                    <div class="modal-item">
+                        <span class="modal-item-label">Points d'Expérience (XP)</span>
+                        <span class="modal-item-value">${reputation.xp}</span>
+                    </div>
+                    <div class="modal-item">
+                        <span class="modal-item-label">Alertes Confirmées</span>
+                        <span class="modal-item-value">${reputation.alerts}</span>
+                    </div>
+                     <div class="modal-item">
+                        <span class="modal-item-label">Multiplicateur de Récompense</span>
+                        <span class="modal-item-value">x${reputation.multiplier || 1.0}</span>
+                    </div>
+                </div>
+            `;
+
+            modal.style.display = 'block';
+        });
+    });
+
+    // Fermer la modale
+    modalCloseBtn.onclick = () => {
+        modal.style.display = 'none';
+    };
+
+    window.onclick = (event) => {
+        if (event.target == modal) {
+            modal.style.display = 'none';
+        }
+    };
 });
 
 // --- Logique de visualisation des flux de menaces sur la carte ---
@@ -434,4 +506,13 @@ function drawThreatFlow(flowData) {
 
     // Nettoyer l'élément du DOM après l'animation pour éviter de surcharger la page
     setTimeout(() => { group.remove(); }, 4000); // 4s = durée de l'animation + fondu
+}
+
+function updateSensorReputationVisual(sensorId, color) {
+    const sensorElement = document.querySelector(`.sensor-point[data-id="${sensorId}"] circle`);
+    if (sensorElement) {
+        // Applique la couleur de réputation, mais seulement si le capteur n'est pas en alerte
+        if (!sensorElement.parentElement.classList.contains('status-alert'))
+            sensorElement.style.fill = color;
+    }
 }
