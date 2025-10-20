@@ -110,20 +110,26 @@ ${alertData.description}
 
     // Formatage des numéros maliens
     formatMaliPhoneNumber(phoneNumber) {
-        // Nettoyage du numéro
+        // 1. Nettoyage de tout ce qui n'est pas un chiffre
         let cleaned = phoneNumber.replace(/\D/g, '');
         
-        // Si le numéro commence par 0, le convertir en format international
-        if (cleaned.startsWith('0')) {
-            cleaned = '223' + cleaned.substring(1);
+        // 2. Gérer les préfixes internationaux (ex: 00223...)
+        if (cleaned.startsWith('00223')) {
+            cleaned = cleaned.substring(2); // Retire le '00' pour obtenir '223...'
         }
         
-        // Si le numéro n'a pas l'indicatif, l'ajouter
-        if (!cleaned.startsWith('223')) {
-            cleaned = '223' + cleaned;
+        // 3. Gérer les numéros locaux (ex: 06..., 07...)
+        if (cleaned.length === 9 && cleaned.startsWith('0')) {
+            cleaned = '223' + cleaned.substring(1); // Remplace le '0' par '223'
         }
         
-        return '+' + cleaned;
+        // 4. Si le numéro a 8 chiffres, on suppose que c'est un numéro malien sans indicatif
+        if (cleaned.length === 8) {
+            cleaned = '223' + cleaned; // Ajoute l'indicatif '223'
+        }
+        
+        // 5. Retourne le numéro au format E.164
+        return `+${cleaned}`;
     }
 
     // Vérification de la validité d'un numéro malien
