@@ -48,8 +48,9 @@ class VonageSmsService {
             if (error.response && error.response.data) {
                 errorMessage = JSON.stringify(error.response.data);
             }
-            console.error('❌ Erreur envoi Vonage:', errorMessage);
-            throw error;
+            // On relance une erreur qui sera capturée par le SmsManager
+            // et qui contiendra le message détaillé.
+            throw new Error(errorMessage);
         }
     }
 }
@@ -95,7 +96,7 @@ class SmsManager {
                     sent = true;
                     break; // Succès, on passe au numéro suivant
                 } catch (error) {
-                    console.error(`❌ Échec de l'envoi avec ${provider.constructor.name} à ${phoneNumber}: ${error.message}`);
+                    console.error(`❌ Échec de l'envoi avec ${provider.constructor.name} à ${formattedNumber}: ${error.message}`);
                     // On ne fait rien, la boucle va essayer le prochain fournisseur
                 }
             }
