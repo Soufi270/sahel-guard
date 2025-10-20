@@ -1,4 +1,5 @@
 const { Vonage } = require('@vonage/server-sdk');
+const { TwilioSmsService } = require('./sms-service-twilio');
 
 // Service SMS utilisant Vonage
 class VonageSmsService {
@@ -22,7 +23,7 @@ class VonageSmsService {
     }
 
     // Envoi réel via Vonage
-    async sendViaVonage(phoneNumber, message) {
+    async send(phoneNumber, message) {
         // La vérification est déjà faite dans sendAlertSms via isConfigured
         try {
             console.log(`📲 Tentative envoi via Vonage à ${phoneNumber}`);
@@ -51,16 +52,33 @@ class VonageSmsService {
             throw error;
         }
     }
+}
 
-    // Méthode principale d'envoi SMS
+/**
+ * Classe principale qui gère les services SMS avec une logique de fallback.
+ */
+class SmsManager {
+    constructor() {
+        this.providers = [];
+        const vonageService = new VonageSmsService();
+        if (vonageService.isConfigured) {
+            this.providers.push(vonageService);
+        }
+        const twilioService = new TwilioSmsService();
+        if (twilioService.isConfigured) {
+            this.providers.push(twilioService);
+        }
+        console.log(`📱 Gestionnaire SMS initialisé avec ${this.providers.length} fournisseur(s).`);
+    }
+
     async sendAlertSms(alertData, phoneNumbers) {
-        if (!this.isConfigured) {
-            console.log('⚠️ Service SMS désactivé, aucun envoi.');
-            return phoneNumbers.map(phoneNumber => ({ phoneNumber, success: false, error: 'Service SMS désactivé' }));
+        if (this.providers.length === 0) {
+            console.log('⚠️ Aucun fournisseur SMS n\'est configuré. Aucun envoi.');
+            return phoneNumbers.map(pn => ({ phoneNumber: pn, success: false, error: 'No SMS provider configured' }));
         }
 
         if (!phoneNumbers || phoneNumbers.length === 0) {
-            console.log('⚠️ Aucun numéro à notifier');
+            console.log('⚠️ Aucun numéro à notifier.');
             return [];
         }
 
@@ -68,20 +86,26 @@ class VonageSmsService {
         const results = [];
 
         for (const phoneNumber of phoneNumbers) {
-            try {
-                // Formatage du numéro pour le Mali
-                const formattedNumber = this.formatMaliPhoneNumber(phoneNumber);
-                const result = await this.sendViaVonage(formattedNumber, message);
-                results.push({ phoneNumber, success: true, ...result });
-            } catch (error) {
-                console.error(`❌ Échec envoi à ${phoneNumber}:`, error.message);
-                results.push({ phoneNumber, success: false, error: error.message });
+            const formattedNumber = this.formatMaliPhoneNumber(phoneNumber);
+            let sent = false;
+            for (const provider of this.providers) {
+                try {
+                    const result = await provider.send(formattedNumber, message);
+                    results.push({ phoneNumber, ...result });
+                    sent = true;
+                    break; // Succès, on passe au numéro suivant
+                } catch (error) {
+                    console.error(`❌ Échec de l'envoi avec ${provider.constructor.name} à ${phoneNumber}: ${error.message}`);
+                    // On ne fait rien, la boucle va essayer le prochain fournisseur
+                }
+            }
+            if (!sent) {
+                results.push({ phoneNumber, success: false, error: 'All SMS providers failed' });
             }
         }
-
         return results;
     }
-
+    
     // Formatage du message d'alerte
     formatAlertMessage(alertData) {
         const emojis = {
@@ -146,12 +170,11 @@ let smsService = null;
 
 function getSmsService() {
     if (!smsService) {
-        smsService = new VonageSmsService();
+        smsService = new SmsManager();
     }
     return smsService;
 }
 
 module.exports = {
-    getSmsService,
-    VonageSmsService
+    getSmsService
 };
