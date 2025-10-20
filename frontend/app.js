@@ -400,6 +400,66 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // --- Logique pour le panneau des paramètres ---
+    const smsToggle = document.getElementById('sms-enabled-toggle');
+    const phoneNumbersInput = document.getElementById('phone-numbers');
+    const aiThresholdSlider = document.getElementById('ai-threshold-slider');
+    const aiThresholdValue = document.getElementById('ai-threshold-value');
+    const themeToggle = document.getElementById('theme-toggle');
+    const saveBtn = document.getElementById('save-settings-btn');
+    const clearLogsBtn = document.getElementById('clear-logs-btn');
+
+    async function loadSettingsToUI() {
+        try {
+            const response = await fetch('/api/settings');
+            const settings = await response.json();
+            
+            smsToggle.checked = settings.smsEnabled;
+            phoneNumbersInput.value = settings.alertPhoneNumbers.join(', ');
+            aiThresholdSlider.value = settings.aiAnomalyThreshold;
+            aiThresholdValue.textContent = settings.aiAnomalyThreshold;
+            themeToggle.checked = settings.theme === 'dark';
+            
+            // Appliquer le thème au chargement
+            document.body.style.setProperty('--primary', settings.theme === 'dark' ? '#0a0a1a' : '#f4f7f9');
+        } catch (error) {
+            console.error("Erreur chargement des paramètres:", error);
+        }
+    }
+
+    if (aiThresholdSlider) {
+        aiThresholdSlider.addEventListener('input', () => {
+            aiThresholdValue.textContent = parseFloat(aiThresholdSlider.value).toFixed(2);
+        });
+    }
+
+    if (saveBtn) {
+        saveBtn.addEventListener('click', async () => {
+            const newSettings = {
+                smsEnabled: smsToggle.checked,
+                alertPhoneNumbers: phoneNumbersInput.value.split(',').map(num => num.trim()).filter(Boolean),
+                aiAnomalyThreshold: parseFloat(aiThresholdSlider.value),
+                theme: themeToggle.checked ? 'dark' : 'light'
+            };
+
+            const response = await fetch('/api/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newSettings)
+            });
+            const result = await response.json();
+            if (result.success) {
+                alert('Paramètres sauvegardés !');
+                // Appliquer le thème immédiatement
+                document.body.style.setProperty('--primary', newSettings.theme === 'dark' ? '#0a0a1a' : '#f4f7f9');
+            } else {
+                alert('Erreur lors de la sauvegarde.');
+            }
+        });
+    }
+
+    loadSettingsToUI();
+
     // --- Logique pour la modale des capteurs ---
     const modal = document.getElementById('sensor-modal');
     const modalCloseBtn = document.querySelector('.close-button');
