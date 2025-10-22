@@ -1371,32 +1371,17 @@
                     </div>
                 </div>
             </div>
-        </main>
-        
-        <!-- Section Notifications Email (NOUVEAU) -->
-        <div class="email-section" id="email-section">
-            <h2><i class="fas fa-envelope-open-text"></i> Journal des Notifications Email</h2>
-            <div class="email-list" id="email-list">
-                <!-- Les notifications Email apparaîtront ici -->
-                <div class="email-item slide-in">
-                    <div class="email-icon">
-                        <i class="fas fa-envelope"></i>
-                    </div>
-                    <div class="email-content">
-                        <div class="email-title">Notification Email envoyée</div>
-                        <div class="email-details">
-                            <div class="email-detail"><span>Type:</span> auto-detected-threat</div>
-                            <div class="email-detail"><span>Niveau:</span> high</div>
-                            <div class="email-detail"><span>Destinataires:</span> 1/1</div>
-                            <div class="email-detail"><span>Statut:</span> Succès</div>
-                        </div>
-                        <div class="alert-meta">
-                            <span class="alert-time"><i class="fas fa-clock"></i> 19/09/2025 11:11:54</span>
-                        </div>
+            
+            <!-- Section Notifications Email (NOUVEAU) -->
+            <div class="email-section" id="email-section" style="margin-top: 30px;">
+                <h2><i class="fas fa-envelope-open-text"></i> Journal des Notifications Email</h2>
+                <div class="card">
+                    <div class="email-list" id="email-list">
+                        <div class="placeholder" style="text-align: center; color: var(--text-secondary); padding: 20px;">En attente de notifications par email...</div>
                     </div>
                 </div>
             </div>
-        </div>
+        </main>
 
         <div class="settings-section" id="settings-section">
             <h2><i class="fas fa-cogs"></i> Paramètres du Système</h2>
@@ -1491,13 +1476,13 @@
 
     <style>
         /* Styles pour la section Email */
-        .email-section h2 { margin-bottom: 20px; font-size: 1.4rem; display: flex; align-items: center; gap: 10px; }
+        .email-section h2 { margin-bottom: 20px; font-size: 1.4rem; display: flex; align-items: center; gap: 10px; color: var(--light); }
         .email-list { max-height: 400px; overflow-y: auto; padding-right: 10px; }
         .email-item { display: flex; align-items: flex-start; padding: 20px; background: rgba(255, 255, 255, 0.03); border-radius: 10px; margin-bottom: 15px; border-left: 5px solid #00aaff; }
         .email-icon { width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 20px; font-size: 1.3rem; flex-shrink: 0; background: rgba(0, 170, 255, 0.2); color: #00aaff; }
         .email-content { flex-grow: 1; }
         .email-title { font-weight: 600; margin-bottom: 8px; font-size: 1.1rem; color: #00aaff; }
-        .email-details { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 8px; }
+        .email-details { display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 8px; }
         .email-detail { font-size: 0.9rem; }
         .email-detail span { font-weight: 600; color: #b0c4ff; }
     </style>

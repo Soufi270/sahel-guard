@@ -307,6 +307,7 @@ function addEmailToUI(emailLogEntry, animate = true) { // <-- NOUVEAU
     const placeholder = list.querySelector('.placeholder');
     if (placeholder) placeholder.remove();
 
+
     const item = document.createElement('div');
     item.className = `email-item ${animate ? 'slide-in' : ''}`;
     const formattedDate = new Date(emailLogEntry.alertData.timestamp).toLocaleTimeString('fr-FR');
@@ -432,8 +433,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const menuMapping = {
         'menu-alerts': 'alert-section', 'menu-hcs': 'hcs-section',
-        'menu-signatures': 'signatures-section', 'menu-rewards': 'rewards-section',
-        'menu-sms': 'sms-section', 'menu-map': 'map-section'
+        'menu-signatures': 'signatures-section', 'menu-rewards': 'rewards-section', 'menu-email': 'email-section',
+        'menu-map': 'map-section'
     };
 
     Object.keys(menuMapping).forEach(menuId => {

@@ -313,6 +313,7 @@ app.post('/api/analyze', async (req, res) => {
                         // Mode normal : envoyer un email pour chaque alerte
                         emailService.sendAlertEmail(alertData, recipientEmails)
                             .then(emailResults => {
+                                console.log(`📧 Emails envoyés: ${emailResults.filter(r => r.success).length}/${emailResults.length}`);
                                 const emailLogEntry = { alertData, emailResults };
                                 emailLogHistory.unshift(emailLogEntry);
                                 if (emailLogHistory.length > MAX_LOG_HISTORY) emailLogHistory.pop();
@@ -320,6 +321,8 @@ app.post('/api/analyze', async (req, res) => {
                             })
                             .catch(err => console.error('❌ Erreur envoi email:', err));
                     }
+                } else {
+                    console.warn('⚠️ Email activé mais aucune adresse de destinataire configurée dans les paramètres ou la variable d\'environnement ALERT_EMAILS.');
                 }
             }
 
