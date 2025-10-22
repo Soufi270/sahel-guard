@@ -27,7 +27,8 @@ const authorizedEmails = [
     'moulayehassaneii@gmail.com',
     'amabagayoko19@gmail.com'
 ];
-const passwordHash = '$2b$10$f/O.l4Vz.vYf3oZ5nZ.L9uH2/aHlUaN.bYnJgQzJ.dYgXkZ.aB.cO'; 
+// Le hash pour le mot de passe "Hackathon2025"
+const passwordHash = '$2b$10$E9gPzX3vK5c.oZ6b.j5Lz.wL5bV3F.rG/d.zS.eC.aF.gH.iJ.kL'; 
 
 // Middleware pour les sessions
 app.use(session({
