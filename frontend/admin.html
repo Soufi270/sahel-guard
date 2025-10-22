@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAHEL GUARD - Admin Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #0a0a1a;
+            --secondary: #10182c;
+            --accent: #00aaff;
+            --success: #00ff7f;
+            --warning: #ffaa00;
+            --danger: #ff3333;
+            --light: #e0e0e0;
+            --dark: #343a40;
+            --text-secondary: #8c9eba;
+            --border: rgba(0, 170, 255, 0.2);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: var(--primary); color: var(--light); min-height: 100vh; line-height: 1.6; }
+        .app-container { display: grid; grid-template-columns: 280px 1fr; grid-template-rows: 80px 1fr 60px; grid-template-areas: "sidebar header" "sidebar main" "sidebar footer"; height: 100vh; max-width: 100%; overflow: hidden; }
+        header { grid-area: header; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding: 0 30px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); }
+        .header-title { display: flex; align-items: center; gap: 15px; }
+        .header-title h1 { font-size: 1.8rem; font-weight: 700; background: linear-gradient(90deg, var(--accent), #00f2fe); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .header-title i { font-size: 2rem; color: var(--accent); }
+        .header-actions { display: flex; gap: 15px; align-items: center; }
+        .status-indicator { display: flex; align-items: center; gap: 10px; font-size: 0.9rem; background: rgba(255, 255, 255, 0.1); padding: 8px 15px; border-radius: 20px; }
+        .status-dot { width: 12px; height: 12px; border-radius: 50%; background-color: var(--success); }
+        .btn { padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; transition: all 0.3s; display: inline-flex; align-items: center; gap: 8px; font-size: 0.9rem; }
+        .btn-primary { background: linear-gradient(90deg, var(--accent), #00f2fe); color: white; }
+        .btn-primary:hover { opacity: 0.9; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0, 170, 255, 0.3); }
+        .sidebar { grid-area: sidebar; background: rgba(0, 0, 0, 0.3); backdrop-filter: blur(10px); border-right: 1px solid rgba(255, 255, 255, 0.1); padding: 30px 0; overflow-y: auto; }
+        .sidebar-logo { padding: 0 25px 25px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); margin-bottom: 25px; }
+        .sidebar-logo h2 { display: flex; align-items: center; gap: 12px; font-size: 1.3rem; font-weight: 600; }
+        .sidebar-logo i { color: #06d6a0; }
+        .sidebar-menu { list-style: none; }
+        .menu-item { padding: 15px 25px; display: flex; align-items: center; gap: 15px; cursor: pointer; transition: all 0.3s; border-left: 4px solid transparent; font-size: 1rem; }
+        .menu-item:hover, .menu-item.active { background: rgba(255, 255, 255, 0.05); border-left-color: var(--accent); }
+        .menu-item i { width: 20px; text-align: center; font-size: 1.1rem; }
+        main { grid-area: main; padding: 30px; overflow-y: scroll; }
+        .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 25px; margin-bottom: 30px; }
+        .card { background: rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 25px; backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); transition: transform 0.3s, box-shadow 0.3s; height: 100%; }
+        .card:hover { transform: translateY(-5px); background: rgba(255, 255, 255, 0.07); box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2); }
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .card-title { font-size: 1.2rem; font-weight: 600; }
+        .card-icon { width: 50px; height: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; }
+        .stat-value { font-size: 2.2rem; font-weight: 700; margin: 15px 0; background: linear-gradient(90deg, var(--accent), #00f2fe); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .stat-label { color: var(--text-secondary); font-size: 0.95rem; }
+        .status-panel { background: rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 25px; margin-bottom: 30px; border: 1px solid rgba(255, 255, 255, 0.1); }
+        .status-panel h2 { margin-bottom: 20px; font-size: 1.4rem; display: flex; align-items: center; gap: 10px; }
+        .status-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
+        .status-item { display: flex; flex-direction: column; gap: 8px; }
+        .status-label { font-size: 0.9rem; color: var(--text-secondary); }
+        .status-value { font-size: 1.1rem; font-weight: 600; }
+        .status-value.connected { color: var(--success); }
+        .status-value.disconnected { color: var(--danger); }
+        .status-value.pending { color: var(--warning); }
+        .alert-section { margin-top: 30px; }
+        .alert-section h2 { margin-bottom: 20px; font-size: 1.4rem; display: flex; align-items: center; gap: 10px; }
+        .alert-list { max-height: 400px; overflow-y: auto; padding-right: 10px; }
+        .alert-item { display: flex; align-items: flex-start; padding: 20px; background: rgba(255, 255, 255, 0.03); border-radius: 10px; margin-bottom: 15px; border-left: 5px solid var(--warning); transition: transform 0.2s; }
+        .alert-item:hover { transform: translateX(5px); background: rgba(255, 255, 255, 0.05); }
+        .alert-item.critical { border-left-color: var(--danger); }
+        .alert-item.high { border-left-color: var(--warning); }
+        .alert-item.medium { border-left-color: var(--accent); }
+        .alert-item.low { border-left-color: var(--success); }
+        .alert-item.reward { border-left-color: #9b59b6; }
+        .alert-icon { width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 20px; font-size: 1.3rem; flex-shrink: 0; }
+        .alert-content { flex-grow: 1; }
+        .alert-title { font-weight: 600; margin-bottom: 8px; font-size: 1.1rem; }
+        .alert-desc { font-size: 0.95rem; color: var(--text-secondary); margin-bottom: 8px; line-height: 1.5; }
+        .alert-meta { display: flex; gap: 15px; font-size: 0.85rem; color: var(--text-secondary); }
+        .alert-time { display: flex; align-items: center; gap: 5px; }
+        .form-panel { background: rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 25px; border: 1px solid rgba(255, 255, 255, 0.1); margin-top: 30px; }
+        .form-panel h2 { margin-bottom: 20px; font-size: 1.4rem; display: flex; align-items: center; gap: 10px; }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
+        .form-group { margin-bottom: 20px; }
+        .form-label { display: block; margin-bottom: 8px; font-weight: 500; color: var(--text-secondary); }
+        .form-control { width: 100%; padding: 12px 15px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(255, 255, 255, 0.05); color: white; font-size: 1rem; transition: border-color 0.3s; }
+        .form-control option { background: white; color: black; }
+        .form-control:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(0, 170, 255, 0.2); }
+        textarea.form-control { min-height: 100px; resize: vertical; }
+        footer { grid-area: footer; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border-top: 1px solid rgba(255, 255, 255, 0.1); display: flex; align-items: center; justify-content: space-between; padding: 0 30px; font-size: 0.95rem; color: var(--text-secondary); }
+        .footer-left, .footer-center, .footer-right { flex: 1; display: flex; align-items: center; gap: 15px; }
+        .footer-center { text-align: center; }
+        .footer-right { justify-content: flex-end; }
+        .footer-left a, .footer-right a { color: var(--text-secondary); text-decoration: none; transition: color 0.3s; display: inline-flex; align-items: center; gap: 8px; font-size: 1.2rem; }
+        .footer-left a:hover, .footer-right a:hover { color: var(--accent); }
+        .footer-right i { color: var(--success); }
+        .token-panel { background: linear-gradient(135deg, #2c3e50, #3498db); color: white; }
+        .token-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-top: 15px; }
+        .token-stat { background: rgba(255, 255, 255, 0.1); padding: 15px; border-radius: 8px; text-align: center; }
+        .token-value { font-size: 1.5rem; font-weight: 700; display: block; margin-bottom: 5px; }
+        .token-label { font-size: 0.85rem; opacity: 0.9; }
+        .rewards-section { margin-top: 30px; }
+        .rewards-list { max-height: 400px; overflow-y: auto; padding-right: 10px; }
+        .reward-item { display: flex; align-items: flex-start; padding: 20px; background: rgba(255, 255, 255, 0.03); border-radius: 10px; margin-bottom: 15px; border-left: 5px solid #9b59b6; }
+        .reward-icon { width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 20px; font-size: 1.3rem; flex-shrink: 0; background: rgba(155, 89, 182, 0.2); color: #9b59b6; }
+        .reward-content { flex-grow: 1; }
+        .reward-title { font-weight: 600; margin-bottom: 8px; font-size: 1.1rem; color: #9b59b6; }
+        .reward-details { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 8px; }
+        .reward-detail { font-size: 0.9rem; }
+        .reward-detail span { font-weight: 600; color: var(--text-secondary); }
+        @media (max-width: 1024px) { .app-container { grid-template-columns: 1fr; grid-template-areas: "header" "main" "footer"; } .sidebar { display: none; } .dashboard-grid { grid-template-columns: 1fr; } .status-grid, .form-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 768px) { header { padding: 0 20px; flex-direction: column; gap: 15px; padding: 15px; } main { padding: 20px; } .header-actions { width: 100%; justify-content: center; } .alert-meta { flex-direction: column; gap: 5px; } .reward-details { grid-template-columns: 1fr; } }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        .pulse { animation: pulse 2s infinite; }
+        @keyframes slideIn { from { transform: translateX(-20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        .slide-in { animation: slideIn 0.3s ease-out; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.05); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.3); }
+        .map-section { margin-top: 30px; }
+        .map-section h2 { margin-bottom: 20px; font-size: 1.4rem; display: flex; align-items: center; gap: 10px; }
+        .map-container { background: rgba(0, 0, 0, 0.2); border-radius: 12px; padding: 20px; border: 1px solid rgba(255, 255, 255, 0.1); }
+        .mali-map { width: 100%; height: auto; filter: drop-shadow(0 0 10px var(--accent)); }
+        .sensor-point circle { fill: var(--success); stroke: var(--light); stroke-width: 2; animation: pulse-sensor 2s infinite; }
+        .sensor-point.status-alert circle { fill: var(--danger); animation: pulse-alert 1s infinite; }
+        .sensor-point.status-active circle { fill: var(--success); }
+        .sensor-point text { fill: var(--light); font-size: 16px; text-anchor: middle; pointer-events: none; }
+        @keyframes pulse-sensor { 0% { r: 8; opacity: 1; } 50% { r: 14; opacity: 0.5; } 100% { r: 8; opacity: 1; } }
+        @keyframes pulse-alert { 0% { opacity: 1; stroke-width: 2; } 50% { opacity: 0.6; stroke-width: 4; } 100% { opacity: 1; stroke-width: 2; } }
+        .threat-flow-group { animation: fade-out-line 1s 3s forwards; }
+        .threat-flow-line { stroke-width: 2; stroke-linecap: round; animation: draw-line 1.5s ease-out forwards; transform-origin: center; }
+        .threat-flow-glow { stroke-width: 8; stroke-linecap: round; stroke-opacity: 0.3; filter: blur(4px); animation: draw-line 1.5s ease-out forwards; }
+        .flow-particle { fill: white; }
+        @keyframes draw-line { from { stroke-dasharray: 1000; stroke-dashoffset: 1000; } to { stroke-dasharray: 1000; stroke-dashoffset: 0; } }
+        @keyframes fade-out-line { to { opacity: 0; } }
+        .hcs-section { margin-top: 30px; }
+        .hcs-section h2 { margin-bottom: 20px; font-size: 1.4rem; display: flex; align-items: center; gap: 10px; }
+        .hcs-log-list { max-height: 400px; overflow-y: auto; padding: 15px; background: rgba(0, 0, 0, 0.2); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Courier New', Courier, monospace; font-size: 0.9rem; }
+        .hcs-log-item { padding: 10px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.1); line-height: 1.5; }
+        .hcs-log-item:last-child { border-bottom: none; }
+        .hcs-log-item .log-time { color: var(--text-secondary); margin-right: 10px; }
+        .hcs-log-item .log-message { color: var(--text-secondary); }
+        .hcs-log-item .log-type { color: var(--accent); }
+        .map-tooltip { position: absolute; display: none; background: rgba(0, 0, 0, 0.85); border: 1px solid var(--accent); border-radius: 8px; padding: 12px 18px; font-size: 0.9rem; pointer-events: none; z-index: 1000; transition: opacity 0.2s; }
+        .map-tooltip h4 { margin: 0 0 8px 0; color: var(--accent); font-size: 1rem; }
+        .map-tooltip p { margin: 3px 0; white-space: nowrap; }
+        .settings-section { padding: 30px; display: none; overflow-y: auto; }
+        .settings-section.active { display: block; animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .settings-section h2 { margin-bottom: 20px; }
+        .settings-card { background: rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 25px; margin-bottom: 25px; border: 1px solid rgba(255, 255, 255, 0.1); }
+        .settings-card h3 { margin-bottom: 20px; display: flex; align-items: center; gap: 10px; color: var(--accent); }
+        .setting-item { margin-bottom: 20px; }
+        .toggle-label { font-weight: 500; margin-right: 15px; }
+        .switch { position: relative; display: inline-block; width: 60px; height: 34px; vertical-align: middle; }
+        .switch input { display: none; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; }
+        .slider:before { position: absolute; content: ""; height: 26px; width: 26px; left: 4px; bottom: 4px; background-color: white; transition: .4s; }
+        input:checked + .slider { background-color: #2196F3; }
+        input:focus + .slider { box-shadow: 0 0 1px #2196F3; }
+        input:checked + .slider:before { transform: translateX(26px); }
+        .slider.round { border-radius: 34px; }
+        .slider.round:before { border-radius: 50%; }
+        .form-range { width: 100%; accent-color: var(--accent); }
+        .range-labels { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-secondary); margin-top: 5px; }
+        .settings-actions { margin-top: 20px; text-align: right; }
+        #save-settings-btn { padding: 12px 25px; }
+        .modal { display: none; position: fixed; z-index: 1001; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.7); backdrop-filter: blur(5px); }
+        .modal-content { background-color: var(--secondary); margin: 15% auto; padding: 30px; border: 1px solid var(--accent); width: 80%; max-width: 500px; border-radius: 12px; position: relative; animation: slide-down 0.4s ease-out; }
+        @keyframes slide-down { from { transform: translateY(-50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .close-button { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; transition: color 0.3s; }
+        .close-button:hover, .close-button:focus { color: white; text-decoration: none; }
+        #modal-title { margin-bottom: 20px; color: var(--accent); }
+        .modal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .modal-item { background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; }
+        .modal-item-label { font-size: 0.9rem; color: var(--text-secondary); display: block; margin-bottom: 5px; }
+        .modal-item-value { font-size: 1.1rem; font-weight: 600; }
+        .email-section h2 { margin-bottom: 20px; font-size: 1.4rem; display: flex; align-items: center; gap: 10px; color: var(--light); }
+        .email-list { max-height: 400px; overflow-y: auto; padding-right: 10px; }
+        .email-item { display: flex; align-items: flex-start; padding: 20px; background: rgba(255, 255, 255, 0.03); border-radius: 10px; margin-bottom: 15px; border-left: 5px solid #00aaff; }
+        .email-icon { width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 20px; font-size: 1.3rem; flex-shrink: 0; background: rgba(0, 170, 255, 0.2); color: #00aaff; }
+        .email-content { flex-grow: 1; }
+        .email-title { font-weight: 600; margin-bottom: 8px; font-size: 1.1rem; color: #00aaff; }
+        .email-details { display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 8px; }
+        .email-detail { font-size: 0.9rem; }
+        .email-detail span { font-weight: 600; color: #b0c4ff; }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <div class="header-title">
+                <i class="fas fa-shield-alt"></i>
+                <h1>SAHEL GUARD</h1>
+            </div>
+            <div class="header-actions">
+                <div class="status-indicator">
+                    <div class="status-dot"></div>
+                    <span>Système Actif</span>
+                </div>
+                <button class="btn btn-primary" id="new-alert-btn">
+                    <i class="fas fa-plus"></i>
+                    Simuler une Alerte
+                </button>
+            </div>
+        </header>
+        
+        <aside class="sidebar">
+            <div class="sidebar-logo">
+                <h2><i class="fas fa-globe-africa"></i> Surveillance Réseau</h2>
+                <p style="font-size: 0.9rem; margin-top: 5px; color: #b0c4ff;">Afrique de l'Ouest</p>
+            </div>
+            <ul class="sidebar-menu">
+                <li class="menu-item active">
+                    <i class="fas fa-home"></i>
+                    <span>Tableau de Bord</span>
+                </li>
+                <li class="menu-item" id="menu-alerts">
+                    <i class="fas fa-bell"></i>
+                    <span>Alertes</span>
+                </li>
+                <li class="menu-item" id="menu-hcs">
+                    <i class="fas fa-link"></i>
+                    <span>Hedera HCS</span>
+                </li>
+                <li class="menu-item" id="menu-signatures">
+                    <i class="fas fa-fingerprint"></i>
+                    <span>Registre Menaces</span>
+                </li>
+                <li class="menu-item" id="menu-rewards">
+                    <i class="fas fa-coins"></i>
+                    <span>Récompenses HTS</span>
+                </li>
+                <li class="menu-item" id="menu-email">
+                    <i class="fas fa-envelope"></i>
+                    <span>Notifications Email</span>
+                </li>
+                <li class="menu-item" id="menu-map">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <span>Cartographie</span>
+                </li>
+                <li class="menu-item" id="menu-settings">
+                    <i class="fas fa-cog"></i>
+                    <span>Paramètres</span>
+                </li>
+            </ul>
+        </aside>
+        
+        <main>
+            <div class="status-panel">
+                <h2><i class="fas fa-chart-line"></i> Statut du Système</h2>
+                <div class="status-grid">
+                    <div class="status-item">
+                        <span class="status-label">Connexion Hedera</span>
+                        <span class="status-value connected" id="hedera-status">Connecté</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Topic ID</span>
+                        <span class="status-value" id="topic-id">Chargement...</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Token SAHEL</span>
+                        <span class="status-value" id="token-status">Mode Simulation</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Service Email</span>
+                        <span class="status-value connected" id="email-status">Actif</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">IA Détection</span>
+                        <span class="status-value connected" id="ai-status">Active</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="dashboard-grid">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Capteurs Réseau</h3>
+                        <div class="card-icon" style="background: rgba(255, 107, 107, 0.2); color: #ff6b6b;">
+                            <i class="fas fa-satellite-dish"></i>
+                        </div>
+                    </div>
+                    <div class="stat-value" id="sensors-count">6</div>
+                    <div class="stat-label">Capteurs Actifs</div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Alertes HCS</h3>
+                        <div class="card-icon" style="background: rgba(255, 209, 102, 0.2); color: #ffd166;">
+                            <i class="fas fa-link"></i>
+                        </div>
+                    </div>
+                    <div class="stat-value" id="total-alerts-card">0</div>
+                    <div class="stat-label">Alertes Enregistrées</div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">IA Détection</h3>
+                        <div class="card-icon" style="background: rgba(78, 205, 196, 0.2); color: #4ecdc4;">
+                            <i class="fas fa-brain"></i>
+                        </div>
+                    </div>
+                    <div class="stat-value">98.2%</div>
+                    <div class="stat-label">Précision</div>
+                </div>
+                
+                <div class="card token-panel">
+                    <div class="card-header">
+                        <h3 class="card-title">Récompenses HTS</h3>
+                        <div class="card-icon" style="background: rgba(255, 255, 255, 0.2); color: white;">
+                            <i class="fas fa-coins"></i>
+                        </div>
+                    </div>
+                    <div class="stat-value" id="total-rewards-card">0</div>
+                    <div class="stat-label">HBAR Distribués</div>
+                    <div class="token-grid">
+                        <div class="token-stat">
+                            <span class="token-value" id="total-alerts">0</span>
+                            <span class="token-label">Total Alertes</span>
+                        </div>
+                        <div class="token-stat">
+                            <span class="token-value" id="total-rewards">0</span>
+                            <span class="token-label">Récompenses</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="alert-section" id="alert-section">
+                <h2><i class="fas fa-bell"></i> Alertes en Temps Réel</h2>
+                <div class="alert-list" id="alerts-list">
+                    <!-- Les alertes apparaîtront ici -->
+                </div>
+            </div>
+            
+            <div class="form-panel" id="form-panel">
+                <h2><i class="fas fa-flask"></i> Simuler une Alerte</h2>
+                <form id="alert-form">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="alert-type" class="form-label">Type d'alerte</label>
+                            <select id="alert-type" class="form-control" required>
+                                <option value="phishing">Tentative de Phishing</option>
+                                <option value="ddos">Attaque DDoS</option>
+                                <option value="intrusion">Intrusion réseau</option>
+                                <option value="malware">Détection de Malware</option>
+                                <option value="suspicious">Activité suspecte</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="alert-severity" class="form-label">Niveau de sévérité</label>
+                            <select id="alert-severity" class="form-control" required>
+                                <option value="low">Faible</option>
+                                <option value="medium">Moyen</option>
+                                <option value="high">Élevé</option>
+                                <option value="critical">Critique</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="alert-source" class="form-label">Source (IP)</label>
+                        <input type="text" id="alert-source" class="form-control" value="154.16." required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="alert-description" class="form-label">Description</label>
+                        <textarea id="alert-description" class="form-control" rows="3" placeholder="Détails de l'alerte..."></textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-paper-plane"></i>
+                        Envoyer l'alerte
+                    </button>
+                </form>
+            </div>
+            
+            <div class="map-section" id="map-section">
+                <h2><i class="fas fa-map-marked-alt"></i> Cartographie des Capteurs</h2>
+                <div class="map-container">
+                    <svg viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg" class="mali-map">
+                        <path d="M150,50 L250,30 L400,80 L500,50 L600,150 L700,250 L650,400 L500,550 L350,580 L200,500 L100,350 L120,200 Z" 
+                              fill="rgba(255, 255, 255, 0.1)" stroke="#4facfe" stroke-width="2"/>
+                        <g id="threat-origins">
+                            <circle id="origin-1" cx="50" cy="50" r="5" fill="var(--danger)" opacity="0.5"/>
+                            <circle id="origin-2" cx="750" cy="50" r="5" fill="var(--danger)" opacity="0.5"/>
+                            <circle id="origin-3" cx="50" cy="550" r="5" fill="var(--danger)" opacity="0.5"/>
+                            <circle id="origin-4" cx="750" cy="550" r="5" fill="var(--danger)" opacity="0.5"/>
+                        </g>
+                        <g id="threat-flows-group"></g>
+                        <g class="sensor-point" data-id="1" data-location="Kayes" data-ip="10.0.0.1"><circle cx="180" cy="280" r="8"/><text x="180" y="305">Kayes</text></g>
+                        <g class="sensor-point" data-id="2" data-location="Bamako" data-ip="10.0.0.2"><circle cx="280" cy="380" r="8"/><text x="280" y="405">Bamako</text></g>
+                        <g class="sensor-point" data-id="3" data-location="Sikasso" data-ip="10.0.0.3"><circle cx="360" cy="480" r="8"/><text x="360" y="505">Sikasso</text></g>
+                        <g class="sensor-point" data-id="4" data-location="Ségou" data-ip="10.0.0.4"><circle cx="390" cy="350" r="8"/><text x="390" y="375">Ségou</text></g>
+                        <g class="sensor-point" data-id="5" data-location="Mopti" data-ip="10.0.0.5"><circle cx="480" cy="290" r="8"/><text x="480" y="315">Mopti</text></g>
+                        <g class="sensor-point" data-id="6" data-location="Gao" data-ip="10.0.0.6"><circle cx="600" cy="220" r="8"/><text x="600" y="245">Gao</text></g>
+                    </svg>
+                </div>
+                <div id="map-tooltip" class="map-tooltip"></div>
+            </div>
+
+            <div class="hcs-section" id="hcs-section">
+                <h2><i class="fas fa-stream"></i> Journal des Transactions Hedera HCS</h2>
+                <div class="status-grid" style="margin-bottom: 20px; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px;">
+                     <div class="status-item">
+                        <span class="status-label">Topic ID</span>
+                        <span class="status-value" id="hcs-topic-id">Chargement...</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Réseau</span>
+                        <span class="status-value" id="hcs-network">Hedera Testnet</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Statut</span>
+                        <span class="status-value connected" id="hcs-status">Actif</span>
+                    </div>
+                </div>
+                <div class="hcs-log-list" id="hcs-log-list">
+                    <div class="hcs-log-item"><p>Initialisation du journal des transactions HCS...</p></div>
+                </div>
+            </div>
+
+            <div class="hcs-section" id="signatures-section">
+                <h2><i class="fas fa-fingerprint"></i> Registre Public des Signatures de Menaces</h2>
+                <div class="hcs-log-list" id="signatures-log-list">
+                    <div class="hcs-log-item"><p>Initialisation du registre des signatures...</p></div>
+                </div>
+            </div>
+
+            <div class="rewards-section" id="rewards-section">
+                <h2><i class="fas fa-trophy"></i> Récompenses Distribuées</h2>
+                <div class="rewards-list" id="rewards-list">
+                    <!-- Les récompenses apparaîtront ici -->
+                </div>
+            </div>
+            
+            <div class="email-section" id="email-section" style="margin-top: 30px;">
+                <h2><i class="fas fa-envelope-open-text"></i> Journal des Notifications Email</h2>
+                <div class="card">
+                    <div class="email-list" id="email-list">
+                        <div class="placeholder" style="text-align: center; color: var(--text-secondary); padding: 20px;">En attente de notifications par email...</div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <div class="settings-section" id="settings-section">
+            <h2><i class="fas fa-cogs"></i> Paramètres du Système</h2>
+            
+            <div class="settings-card">
+                <h3><i class="fas fa-envelope"></i> Notifications Email</h3>
+                <div class="setting-item">
+                    <label for="email-enabled-toggle" class="toggle-label">Activer les notifications Email</label>
+                    <label class="switch">
+                        <input type="checkbox" id="email-enabled-toggle">
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+                <div class="setting-item">
+                    <label for="email-addresses" class="form-label">Adresses Email (séparées par une virgule)</label>
+                    <textarea id="email-addresses" class="form-control" rows="3" placeholder="Ex: admin@example.com, security@example.com"></textarea>
+                    <small>Note: Toutes les adresses email valides seront utilisées pour l'envoi des alertes.</small>
+                </div>
+                <div class="setting-item">
+                    <label for="email-digest-toggle" class="toggle-label">Activer la synthèse d'emails (mode anti-flood)</label>
+                    <label class="switch">
+                        <input type="checkbox" id="email-digest-toggle">
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+                <div class="setting-item">
+                    <label for="email-digest-minutes" class="form-label">Intervalle de la synthèse (minutes)</label>
+                    <input type="number" id="email-digest-minutes" class="form-control" min="1" max="60" value="5">
+                    <small>Après une alerte, les suivantes seront regroupées et envoyées dans une synthèse après cet intervalle.</small>
+                </div>
+            </div>
+
+            <div class="settings-card">
+                <h3><i class="fas fa-brain"></i> Seuil de Détection IA</h3>
+                <div class="setting-item">
+                    <label for="ai-threshold-slider" class="form-label">Seuil de confiance d'anomalie: <span id="ai-threshold-value">0.9</span></label>
+                    <input type="range" id="ai-threshold-slider" min="0.5" max="0.99" step="0.01" class="form-range">
+                    <div class="range-labels">
+                        <span>Moins sensible</span>
+                        <span>Plus sensible</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-card">
+                <h3><i class="fas fa-desktop"></i> Interface Utilisateur</h3>
+                <div class="setting-item">
+                    <label for="theme-toggle" class="toggle-label">Thème Sombre</label>
+                    <label class="switch">
+                        <input type="checkbox" id="theme-toggle">
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+                <div class="setting-item">
+                    <label class="form-label">Gestion des journaux</label>
+                    <button id="clear-logs-btn" class="btn btn-danger" style="background: var(--danger);"><i class="fas fa-trash-alt"></i> Vider les journaux</button>
+                </div>
+            </div>
+
+            <div class="settings-actions">
+                <button id="save-settings-btn" class="btn btn-primary">
+                    <i class="fas fa-save"></i>
+                    Enregistrer les Paramètres
+                </button>
+            </div>
+        </div>
+        
+        <footer>
+            <div class="footer-left">
+                <a href="https://github.com/Soufi270/sahel-guard" target="_blank" rel="noopener" title="Voir le code source"><i class="fab fa-github"></i></a>
+                <a href="mailto:layesouf@gmail.com" title="Nous contacter"><i class="fas fa-envelope"></i></a>
+            </div>
+            <div class="footer-center">
+                <p>SAHEL GUARD v1.0 | Hackathon Hedera 2025</p>
+            </div>
+            <div class="footer-right">
+                <a href="https://hedera.com/" target="_blank" rel="noopener">Powered by <i class="fab fa-hive"></i> Hedera</a>
+            </div>
+        </footer>
+    </div>
+
+    <div id="sensor-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h3 id="modal-title">Détails du Capteur</h3>
+            <div id="modal-body"></div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
