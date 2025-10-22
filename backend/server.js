@@ -21,12 +21,13 @@ const server = http.createServer(app);
 const io = socketIo(server);
 
 // --- Configuration de l'authentification ---
-const authorizedEmails = [
+const authorizedEmailsRaw = [
     'layesouf@gmail.com',
     'garikosouleymane6@gmail.com',
     'moulayehassaneii@gmail.com',
     'amabagayoko19@gmail.com'
 ];
+const authorizedEmails = authorizedEmailsRaw.map(email => email.toLowerCase());
 // Le hash pour le mot de passe "Hackathon2025"
 const passwordHash = '$2b$10$E9gPzX3vK5c.oZ6b.j5Lz.wL5bV3F.rG/d.zS.eC.aF.gH.iJ.kL'; 
 
