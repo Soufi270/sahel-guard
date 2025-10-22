@@ -474,6 +474,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Logique pour le panneau des paramètres ---
     const emailToggle = document.getElementById('email-enabled-toggle'); // <-- MODIFIÉ
     const emailAddressesInput = document.getElementById('email-addresses'); // <-- MODIFIÉ
+    const emailDigestToggle = document.getElementById('email-digest-toggle');
+    const emailDigestMinutesInput = document.getElementById('email-digest-minutes');
     const aiThresholdSlider = document.getElementById('ai-threshold-slider');
     const aiThresholdValue = document.getElementById('ai-threshold-value');
     const themeToggle = document.getElementById('theme-toggle');
@@ -488,6 +490,8 @@ document.addEventListener('DOMContentLoaded', () => {
             
             emailToggle.checked = settings.emailEnabled; // <-- MODIFIÉ
             emailAddressesInput.value = settings.alertEmails.join(', '); // <-- MODIFIÉ
+            emailDigestToggle.checked = settings.emailDigestEnabled;
+            emailDigestMinutesInput.value = settings.emailDigestMinutes;
             aiThresholdSlider.value = settings.aiAnomalyThreshold;
             aiThresholdValue.textContent = settings.aiAnomalyThreshold;
             themeToggle.checked = settings.theme === 'dark';
@@ -511,6 +515,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const newSettings = { // <-- MODIFIÉ
                 emailEnabled: emailToggle.checked,
                 alertEmails: emailAddressesInput.value.split(',').map(email => email.trim()).filter(Boolean),
+                emailDigestEnabled: emailDigestToggle.checked,
+                emailDigestMinutes: parseInt(emailDigestMinutesInput.value, 10),
                 aiAnomalyThreshold: parseFloat(aiThresholdSlider.value),
                 theme: themeToggle.checked ? 'dark' : 'light',
                 activeResponseEnabled: activeResponseToggle.checked // <-- NOUVEAU

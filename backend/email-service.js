@@ -135,6 +135,89 @@ class EmailService {
         </div>
         `;
     }
+
+    /**
+     * Envoie un email de synthèse regroupant plusieurs alertes.
+     * @param {object[]} bufferedAlerts - Un tableau d'objets d'alerte.
+     * @param {string[]} recipientEmails - Liste des adresses email des destinataires.
+     * @returns {Promise<object>} Résultat de l'envoi.
+     */
+    async sendDigestEmail(bufferedAlerts, recipientEmails) {
+        if (!this.isConfigured() || bufferedAlerts.length === 0) {
+            return { success: false, error: 'Service non configuré ou pas d\'alertes à envoyer.' };
+        }
+
+        const subject = `[SAHEL GUARD - SYNTHÈSE] ${bufferedAlerts.length} nouvelles alertes détectées`;
+        const htmlBody = this.formatDigestHtmlBody(bufferedAlerts);
+        const textBody = this.formatDigestTextBody(bufferedAlerts);
+
+        try {
+            console.log(`📧 Tentative d'envoi d'un email de synthèse à ${recipientEmails.join(', ')}`);
+            const info = await this.transporter.sendMail({
+                from: this.senderEmail,
+                to: recipientEmails.join(', '),
+                subject: subject,
+                text: textBody,
+                html: htmlBody,
+            });
+            console.log(`✅ Email de synthèse envoyé avec succès. Message ID: ${info.messageId}`);
+            return { success: true, messageId: info.messageId, alertsSent: bufferedAlerts.length };
+        } catch (error) {
+            console.error(`❌ Échec de l'envoi de l'email de synthèse: ${error.message}`);
+            return { success: false, error: error.message };
+        }
+    }
+
+    formatDigestTextBody(alerts) {
+        let body = `
+SYNTHÈSE DES ALERTES SAHEL GUARD
+---------------------------------
+${alerts.length} nouvelles alertes ont été détectées.
+
+`;
+        alerts.forEach((alert, index) => {
+            body += `
+Alerte #${index + 1}:
+  - Type: ${alert.type}
+  - Sévérité: ${alert.severity.toUpperCase()}
+  - Source: ${alert.source}
+  - Description: ${alert.description}
+  - Timestamp: ${new Date(alert.timestamp).toLocaleString()}
+`;
+        });
+
+        body += `
+
+Pour plus de détails, consultez le tableau de bord SAHEL GUARD.
+`;
+        return body;
+    }
+
+    formatDigestHtmlBody(alerts) {
+        const alertRows = alerts.map(alert => {
+            const severityColor = { critical: '#ff3333', high: '#ffaa00', medium: '#00aaff', low: '#00ff7f' }[alert.severity] || '#cccccc';
+            return `
+                <tr>
+                    <td style="padding: 8px; border: 1px solid rgba(0, 170, 255, 0.1); color: ${severityColor}; font-weight: bold;">${alert.severity.toUpperCase()}</td>
+                    <td style="padding: 8px; border: 1px solid rgba(0, 170, 255, 0.1);">${alert.type}</td>
+                    <td style="padding: 8px; border: 1px solid rgba(0, 170, 255, 0.1);">${alert.source}</td>
+                    <td style="padding: 8px; border: 1px solid rgba(0, 170, 255, 0.1);">${new Date(alert.timestamp).toLocaleTimeString()}</td>
+                </tr>
+            `;
+        }).join('');
+
+        return `
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #e0e0e0; background-color: #0a0a1a; padding: 20px; border-radius: 8px; border: 1px solid rgba(0, 170, 255, 0.2);">
+            <h2 style="color: #ffaa00; border-bottom: 2px solid #ffaa00; padding-bottom: 10px;">SAHEL GUARD - Synthèse des Alertes</h2>
+            <p style="font-size: 1.1em; margin-bottom: 15px;">${alerts.length} nouvelles menaces ont été détectées récemment.</p>
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 0.9em;">
+                <thead style="background-color: #10182c;"><tr><th style="padding: 10px; border: 1px solid rgba(0, 170, 255, 0.1);">Sévérité</th><th style="padding: 10px; border: 1px solid rgba(0, 170, 255, 0.1);">Type</th><th style="padding: 10px; border: 1px solid rgba(0, 170, 255, 0.1);">Source</th><th style="padding: 10px; border: 1px solid rgba(0, 170, 255, 0.1);">Heure</th></tr></thead>
+                <tbody>${alertRows}</tbody>
+            </table>
+            <p style="margin-top: 20px; font-size: 0.9em; color: #8c9eba;">Pour une analyse détaillée, veuillez consulter votre tableau de bord SAHEL GUARD.</p>
+        </div>
+        `;
+    }
 }
 
 let emailServiceInstance = null;

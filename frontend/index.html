@@ -1415,6 +1415,18 @@
                     <textarea id="email-addresses" class="form-control" rows="3" placeholder="Ex: admin@example.com, security@example.com"></textarea>
                     <small>Note: Toutes les adresses email valides seront utilisées pour l'envoi des alertes.</small>
                 </div>
+                <div class="setting-item">
+                    <label for="email-digest-toggle" class="toggle-label">Activer la synthèse d'emails (mode anti-flood)</label>
+                    <label class="switch">
+                        <input type="checkbox" id="email-digest-toggle">
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+                <div class="setting-item">
+                    <label for="email-digest-minutes" class="form-label">Intervalle de la synthèse (minutes)</label>
+                    <input type="number" id="email-digest-minutes" class="form-control" min="1" max="60" value="5">
+                    <small>Après une alerte, les suivantes seront regroupées et envoyées dans une synthèse après cet intervalle.</small>
+                </div>
             </div>
 
             <div class="settings-card">

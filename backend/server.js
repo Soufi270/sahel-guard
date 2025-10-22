@@ -22,10 +22,12 @@ const PORT = process.env.PORT || 3000;
 // --- Gestion des Paramètres ---
 const SETTINGS_FILE_PATH = path.join(__dirname, 'settings.json');
 let settings = {
-    smsEnabled: true,
-    alertEmails: process.env.ALERT_EMAILS ? process.env.ALERT_EMAILS.split(',') : [], // <-- NOUVEAU
-    activeResponseEnabled: true, // <-- NOUVEAU
+    emailEnabled: true,
+    alertEmails: process.env.ALERT_EMAILS ? process.env.ALERT_EMAILS.split(',') : [],
+    activeResponseEnabled: true,
     aiAnomalyThreshold: 0.9,
+    emailDigestEnabled: true, // Activer le mode synthèse
+    emailDigestMinutes: 5,    // Envoyer une synthèse toutes les 5 minutes
     theme: 'dark'
 };
 
@@ -64,6 +66,11 @@ const signatureLogHistory = [];
 const hcsLogHistory = [];
 const emailLogHistory = []; // <-- NOUVEAU
 const rewardsLogHistory = [];
+
+// --- Variables pour la temporisation des emails ---
+let isEmailThrottled = false;
+let alertBuffer = [];
+let emailThrottlingTimeout = null;
 
 // Middleware pour servir les fichiers statiques
 app.use(express.static(path.join(__dirname, '../frontend')));
@@ -264,22 +271,55 @@ app.post('/api/analyze', async (req, res) => {
             }
 
             // Envoi Email si activé
-            if (emailService && settings.emailEnabled && alertData.severity !== 'low') { // <-- MODIFIÉ
-                const recipientEmails = settings.alertEmails || []; // <-- MODIFIÉ
+            if (emailService && settings.emailEnabled && alertData.severity !== 'low') {
+                const recipientEmails = settings.alertEmails || [];
                 
                 if (recipientEmails.length > 0) {
-                    setTimeout(async () => {
-                        try {
-                            const emailResults = await emailService.sendAlertEmail(alertData, recipientEmails); // <-- MODIFIÉ
-                            console.log(`📧 Emails envoyés: ${emailResults.filter(r => r.success).length}/${emailResults.length}`); // <-- MODIFIÉ
-                            const emailLogEntry = { alertData, emailResults }; // <-- MODIFIÉ
-                            emailLogHistory.unshift(emailLogEntry); // <-- MODIFIÉ
-                            if (emailLogHistory.length > MAX_LOG_HISTORY) emailLogHistory.pop(); // <-- MODIFIÉ
-                            io.emit('email-sent', emailLogEntry); // <-- MODIFIÉ
-                        } catch (smsError) {
-                            console.error('❌ Erreur envoi SMS:', smsError);
+                    if (settings.emailDigestEnabled) {
+                        // Mode Synthèse activé
+                        alertBuffer.push(alertData); // Ajouter l'alerte au tampon
+
+                        if (!isEmailThrottled) {
+                            // Si pas en cours de temporisation, on envoie la première alerte immédiatement
+                            console.log('📧 Envoi de l\'alerte email immédiate et début de la temporisation.');
+                            isEmailThrottled = true;
+                            
+                            // Envoyer la première alerte
+                            const firstAlert = alertBuffer.shift(); // On retire la première alerte pour l'envoyer
+                            if (firstAlert) {
+                                emailService.sendAlertEmail(firstAlert, recipientEmails)
+                                    .then(emailResults => {
+                                        const emailLogEntry = { alertData: firstAlert, emailResults };
+                                        emailLogHistory.unshift(emailLogEntry);
+                                        if (emailLogHistory.length > MAX_LOG_HISTORY) emailLogHistory.pop();
+                                        io.emit('email-sent', emailLogEntry);
+                                    })
+                                    .catch(err => console.error('❌ Erreur envoi email immédiat:', err));
+                            }
+
+                            // Programmer l'envoi de la synthèse
+                            emailThrottlingTimeout = setTimeout(() => {
+                                if (alertBuffer.length > 0) {
+                                    console.log(`📧 Fin de la temporisation. Envoi d'une synthèse de ${alertBuffer.length} alerte(s).`);
+                                    emailService.sendDigestEmail(alertBuffer, recipientEmails);
+                                    alertBuffer = []; // Vider le tampon
+                                } else {
+                                    console.log('📧 Fin de la temporisation. Aucune nouvelle alerte à synthétiser.');
+                                }
+                                isEmailThrottled = false; // Fin de la temporisation
+                            }, settings.emailDigestMinutes * 60 * 1000);
                         }
-                    }, 1000);
+                    } else {
+                        // Mode normal : envoyer un email pour chaque alerte
+                        emailService.sendAlertEmail(alertData, recipientEmails)
+                            .then(emailResults => {
+                                const emailLogEntry = { alertData, emailResults };
+                                emailLogHistory.unshift(emailLogEntry);
+                                if (emailLogHistory.length > MAX_LOG_HISTORY) emailLogHistory.pop();
+                                io.emit('email-sent', emailLogEntry);
+                            })
+                            .catch(err => console.error('❌ Erreur envoi email:', err));
+                    }
                 }
             }
 
