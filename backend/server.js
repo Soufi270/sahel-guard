@@ -135,7 +135,7 @@ app.get('/admin', (req, res) => {
 
 // Page Utilisateur
 app.get('/user', (req, res) => {
-    res.sendFile(path.join(__dirname, '../frontend/index.html'));
+    res.sendFile(path.join(__dirname, '../frontend/user.html'));
 });
 
 // --- Simulation de trafic réseau (côté serveur) ---
