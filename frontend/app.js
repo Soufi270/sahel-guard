@@ -102,6 +102,11 @@ socket.on('reputation-updated', (data) => {
     updateSensorReputationVisual(data.sensorId, data.reputation.color);
 });
 
+socket.on('counter-measure-executed', (actionData) => {
+    console.log('🛡️ Contre-mesure exécutée:', actionData);
+    addCounterMeasureToUI(actionData);
+});
+
 // Gestion de l'envoi du formulaire
 alertForm.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -259,6 +264,35 @@ function handleRewardNotification(rewardData) {
     }
 }
 
+// Fonction pour ajouter une contre-mesure à l'UI
+function addCounterMeasureToUI(actionData, animate = true) {
+    const list = document.getElementById('counter-measures-list');
+    if (!list) return;
+
+    // Vider le message d'initialisation
+    const placeholder = list.querySelector('.placeholder');
+    if (placeholder) placeholder.remove();
+
+    const item = document.createElement('div');
+    item.className = `counter-measure-item ${animate ? 'slide-in' : ''}`;
+    const formattedDate = new Date(actionData.timestamp).toLocaleTimeString('fr-FR');
+
+    let icon = 'fa-ban';
+    let actionText = `Blocage IP`;
+
+    item.innerHTML = `
+        <div class="cm-icon"><i class="fas ${icon}"></i></div>
+        <div class="cm-details">
+            <div class="cm-title">${actionText}: <span class="cm-target">${actionData.target}</span></div>
+            <div class="cm-reason">Raison: ${actionData.reason}</div>
+        </div>
+        <div class="cm-time">${formattedDate}</div>
+    `;
+
+    list.insertBefore(item, list.firstChild);
+    if (list.children.length > 20) list.removeChild(list.lastChild);
+}
+
 // Chargement initial: récupérer les infos du topic et du token
 async function loadInitialData() {
     try {
@@ -406,6 +440,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const aiThresholdSlider = document.getElementById('ai-threshold-slider');
     const aiThresholdValue = document.getElementById('ai-threshold-value');
     const themeToggle = document.getElementById('theme-toggle');
+    const activeResponseToggle = document.getElementById('active-response-toggle'); // <-- NOUVEAU
     const saveBtn = document.getElementById('save-settings-btn');
     const clearLogsBtn = document.getElementById('clear-logs-btn');
 
@@ -419,6 +454,7 @@ document.addEventListener('DOMContentLoaded', () => {
             aiThresholdSlider.value = settings.aiAnomalyThreshold;
             aiThresholdValue.textContent = settings.aiAnomalyThreshold;
             themeToggle.checked = settings.theme === 'dark';
+            activeResponseToggle.checked = settings.activeResponseEnabled; // <-- NOUVEAU
             
             // Appliquer le thème au chargement
             document.body.style.setProperty('--primary', settings.theme === 'dark' ? '#0a0a1a' : '#f4f7f9');
@@ -439,7 +475,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 smsEnabled: smsToggle.checked,
                 alertPhoneNumbers: phoneNumbersInput.value.split(',').map(num => num.trim()).filter(Boolean),
                 aiAnomalyThreshold: parseFloat(aiThresholdSlider.value),
-                theme: themeToggle.checked ? 'dark' : 'light'
+                theme: themeToggle.checked ? 'dark' : 'light',
+                activeResponseEnabled: activeResponseToggle.checked // <-- NOUVEAU
             };
 
             const response = await fetch('/api/settings', {

@@ -9,6 +9,7 @@ const { checkBusinessRules } = require('./ai-detection-simple'); // Ré-importat
 const reputationService = require('./sensor-reputation');
 const axios = require('axios');
 const { getSmsService } = require('./sms-service');
+const activeResponseService = require('./active-response-service'); // <-- NOUVEAU
 const { getTokenService } = require("./token-service-simple");
 require('dotenv').config();
 
@@ -23,6 +24,7 @@ const SETTINGS_FILE_PATH = path.join(__dirname, 'settings.json');
 let settings = {
     smsEnabled: true,
     alertPhoneNumbers: process.env.ALERT_PHONE_NUMBERS ? process.env.ALERT_PHONE_NUMBERS.split(',') : [],
+    activeResponseEnabled: true, // <-- NOUVEAU
     aiAnomalyThreshold: 0.9,
     theme: 'dark'
 };
@@ -307,6 +309,20 @@ app.post('/api/analyze', async (req, res) => {
                     }
                 }, 2000);
             }
+
+            // --- NOUVEAU : Contre-mesure automatique ---
+            if (settings.activeResponseEnabled) {
+                setTimeout(() => {
+                    try {
+                        const actionTaken = activeResponseService.executeCounterMeasure(alertData, networkData);
+                        if (actionTaken) {
+                            io.emit('counter-measure-executed', actionTaken);
+                        }
+                    } catch (responseError) {
+                        console.error('❌ Erreur lors de l\'exécution de la contre-mesure:', responseError);
+                    }
+                }, 500); // Exécuter rapidement après la détection
+            }
         }
 
         res.json(finalDecision);
@@ -330,6 +346,9 @@ app.post('/api/settings', (req, res) => {
     if (anomalyDetector) {
         anomalyDetector.anomalyThreshold = settings.aiAnomalyThreshold;
     }
+    // Mettre à jour le paramètre du service de réponse active
+    // (Pas nécessaire pour ce service simple, mais bonne pratique pour des services plus complexes)
+
     saveSettings();
     res.json({ success: true, message: "Paramètres mis à jour." });
 });
