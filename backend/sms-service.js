@@ -1,58 +1,4 @@
-const { Vonage } = require('@vonage/server-sdk');
 const { TwilioSmsService } = require('./sms-service-twilio');
-
-// Service SMS utilisant Vonage
-class VonageSmsService {
-    constructor() {
-        this.apiKey = process.env.VONAGE_API_KEY;
-        this.apiSecret = process.env.VONAGE_API_SECRET;
-        this.senderNumber = process.env.VONAGE_SENDER_NUMBER; // Le numéro fourni par Vonage
-        this.vonage = null;
-
-        if (this.apiKey && this.apiSecret && this.senderNumber) {
-            this.isConfigured = true;
-            this.vonage = new Vonage({
-                apiKey: this.apiKey,
-                apiSecret: this.apiSecret
-            });
-            console.log('📱 Service SMS Vonage configuré et activé.');
-        } else {
-            this.isConfigured = false;
-            console.log('⚠️ Service SMS non configuré (credentials Vonage manquants).');
-        }
-    }
-
-    // Envoi réel via Vonage
-    async send(phoneNumber, message) {
-        // La vérification est déjà faite dans sendAlertSms via isConfigured
-        try {
-            console.log(`📲 Tentative envoi via Vonage à ${phoneNumber}`);
-            // Le numéro doit être au format E.164 complet (avec le '+') pour le SDK Vonage.
-            const to = phoneNumber;
-            const from = this.senderNumber;
-            const text = message;
-            
-            const response = await this.vonage.sms.send({ to, from, text });
-            
-            if (response.messages[0].status === '0') {
-                console.log(`✅ SMS envoyé avec succès à ${to}`);
-                return { success: true, provider: 'vonage', simulated: false };
-            } else {
-                const errorDetails = response.messages[0];
-                const errorMessage = `Échec envoi SMS (Code: ${errorDetails.status}) - ${errorDetails['error-text']}`;
-                throw new Error(errorMessage);
-            }
-        } catch (error) {
-            // Si l'erreur vient du SDK, elle aura une propriété 'response'
-            let errorMessage = error.message;
-            if (error.response && error.response.data) {
-                errorMessage = JSON.stringify(error.response.data);
-            }
-            // On relance une nouvelle erreur pour que le message soit plus clair dans les logs de niveau supérieur.
-            throw new Error(`Erreur API Vonage: ${errorMessage}`);
-        }
-    }
-}
 
 /**
  * Classe principale qui gère les services SMS avec une logique de fallback.
@@ -60,10 +6,6 @@ class VonageSmsService {
 class SmsManager {
     constructor() {
         this.providers = [];
-        const vonageService = new VonageSmsService();
-        if (vonageService.isConfigured) {
-            this.providers.push(vonageService);
-        }
         const twilioService = new TwilioSmsService();
         if (twilioService.isConfigured) {
             this.providers.push(twilioService);
@@ -83,25 +25,34 @@ class SmsManager {
         }
 
         const message = this.formatAlertMessage(alertData);
-        const results = [];
+        const results = []; // Pour stocker les résultats de chaque numéro tenté
 
-        for (const phoneNumber of phoneNumbers) {
-            const formattedNumber = this.formatMaliPhoneNumber(phoneNumber);
-            let sent = false;
-            for (const provider of this.providers) {
-                try {
-                    const result = await provider.send(formattedNumber, message);
-                    results.push({ phoneNumber, ...result });
-                    sent = true;
-                    break; // Succès, on passe au numéro suivant
-                } catch (error) {
-                    console.error(`❌ Échec de l'envoi avec ${provider.constructor.name} à ${formattedNumber}: ${error.message}`);
-                    // On ne fait rien, la boucle va essayer le prochain fournisseur
-                }
-            }
-            if (!sent) {
-                results.push({ phoneNumber, success: false, error: 'All SMS providers failed' });
-            }
+        // Utilise uniquement le premier numéro valide, comme demandé ("un seul numéro doit suffir")
+        const primaryPhoneNumber = phoneNumbers.find(num => this.isValidMaliNumber(num));
+
+        if (!primaryPhoneNumber) {
+            console.warn('⚠️ Aucun numéro de téléphone malien valide trouvé pour l\'envoi de SMS.');
+            return phoneNumbers.map(pn => ({ phoneNumber: pn, success: false, error: 'No valid Mali phone number found' }));
+        }
+
+        const formattedNumber = this.formatMaliPhoneNumber(primaryPhoneNumber);
+        const provider = this.providers[0]; // Il ne devrait y avoir que Twilio maintenant
+
+        try {
+            const result = await provider.send(formattedNumber, message);
+            results.push({ phoneNumber: primaryPhoneNumber, ...result });
+        } catch (error) {
+            const errorMessage = `Échec avec ${provider.constructor.name}: ${error.message}`;
+            console.error(`❌ ${errorMessage} (pour le numéro ${formattedNumber})`);
+            results.push({ phoneNumber: primaryPhoneNumber, success: false, error: errorMessage });
+        }
+
+        // Pour les autres numéros qui n'ont pas été traités (si l'array en contenait plusieurs)
+        // on peut ajouter un message d'information ou d'erreur si nécessaire.
+        // Pour l'instant, on se concentre sur le premier numéro valide.
+        const otherNumbers = phoneNumbers.filter(num => num !== primaryPhoneNumber);
+        for (const num of otherNumbers) {
+            results.push({ phoneNumber: num, success: false, error: 'Only the first valid number is processed for SMS alerts.' });
         }
         return results;
     }
