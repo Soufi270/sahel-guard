@@ -3,6 +3,7 @@ const http = require('http');
 const fs = require('fs');
 const socketIo = require('socket.io');
 const path = require('path');
+const FileStore = require('session-file-store')(session); // NOUVEAU
 const session = require('express-session'); // NOUVEAU
 const bcrypt = require('bcrypt'); // NOUVEAU
 const { sendHCSMessage, getTopicId, createHCSTopic, createSignatureTopic, sendSignatureMessage } = require("./hedera-config");
@@ -30,6 +31,11 @@ const passwordHash = '$2b$10$f/O.l4Vz.vYf3oZ5nZ.L9uH2/aHlUaN.bYnJgQzJ.dYgXkZ.aB.
 
 // Middleware pour les sessions
 app.use(session({
+    store: new FileStore({
+        path: path.join(__dirname, 'sessions'), // Chemin pour stocker les fichiers de session
+        ttl: 86400, // Durée de vie de la session en secondes (24h)
+        retries: 0
+    }),
     secret: process.env.SESSION_SECRET || 'un-secret-tres-secret-pour-le-hackathon',
     resave: false,
     saveUninitialized: false,
