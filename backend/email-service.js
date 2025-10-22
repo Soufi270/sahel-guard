@@ -50,8 +50,16 @@ class EmailService {
                 console.log(`✅ Email envoyé avec succès à ${email}. Message ID: ${info.messageId}`);
                 results.push({ email, success: true, messageId: info.messageId });
             } catch (error) {
-                console.error(`❌ Échec de l'envoi d'email à ${email}: ${error.message}`);
-                results.push({ email, success: false, error: error.message });
+                let detailedError = error.message;
+                let statusCode = '';
+                if (error.response && error.response.body && error.response.body.errors) {
+                    // Log plus détaillé pour le débogage
+                    console.error('SendGrid API Error Body:', JSON.stringify(error.response.body, null, 2));
+                    detailedError = error.response.body.errors.map(e => e.message).join(', ');
+                    statusCode = error.response.statusCode ? ` (Status: ${error.response.statusCode})` : '';
+                }
+                console.error(`❌ Échec de l'envoi d'email à ${email}: ${detailedError}${statusCode}`);
+                results.push({ email, success: false, error: detailedError + statusCode });
             }
         }
         return results;
@@ -154,8 +162,16 @@ class EmailService {
             console.log(`✅ Email de synthèse envoyé avec succès. Message ID: ${info.messageId}`);
             return { success: true, messageId: info.messageId, alertsSent: bufferedAlerts.length };
         } catch (error) {
-            console.error(`❌ Échec de l'envoi de l'email de synthèse: ${error.message}`);
-            return { success: false, error: error.message };
+            let detailedError = error.message;
+            let statusCode = '';
+            if (error.response && error.response.body && error.response.body.errors) {
+                // Log plus détaillé pour le débogage
+                console.error('SendGrid API Error Body:', JSON.stringify(error.response.body, null, 2));
+                detailedError = error.response.body.errors.map(e => e.message).join(', ');
+                statusCode = error.response.statusCode ? ` (Status: ${error.response.statusCode})` : '';
+            }
+            console.error(`❌ Échec de l'envoi de l'email de synthèse: ${detailedError}${statusCode}`);
+            return { success: false, error: detailedError + statusCode };
         }
     }
 
