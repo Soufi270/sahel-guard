@@ -76,6 +76,7 @@ let emailThrottlingTimeout = null;
 app.use(express.static(path.join(__dirname, '../frontend')));
 app.use(express.json());
 
+
 // Initialisation de tous les services
 (async function initializeServices() {
     try {
@@ -120,8 +121,20 @@ app.use(express.json());
     }
 })();
 
-// Route pour la page d'accueil
+// --- NOUVELLES ROUTES POUR LES PAGES ---
+
+// Page d'accueil (portail de sélection)
 app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, '../frontend/index.html'));
+});
+
+// Page Administrateur
+app.get('/admin', (req, res) => {
+    res.sendFile(path.join(__dirname, '../frontend/admin.html'));
+});
+
+// Page Utilisateur
+app.get('/user', (req, res) => {
     res.sendFile(path.join(__dirname, '../frontend/index.html'));
 });
 

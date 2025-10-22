@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAHEL GUARD - Statut Public</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- On réutilise une partie du CSS de la page admin, mais on pourrait le séparer -->
+    <link rel="stylesheet" href="style.css"> 
+    <style>
+        body {
+            background-color: #0a0a1a;
+            color: #e0e0e0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        header {
+            background: rgba(16, 24, 44, 0.8);
+            padding: 20px 40px;
+            border-bottom: 1px solid rgba(0, 170, 255, 0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header-title {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-size: 1.8rem;
+            color: #00aaff;
+        }
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1rem;
+            background: rgba(0, 255, 127, 0.1);
+            color: #00ff7f;
+            padding: 8px 15px;
+            border-radius: 20px;
+        }
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: #00ff7f;
+        }
+        main {
+            padding: 30px;
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+        .section {
+            margin-bottom: 40px;
+        }
+        .section h2 {
+            font-size: 1.6rem;
+            margin-bottom: 20px;
+            border-bottom: 2px solid rgba(0, 170, 255, 0.3);
+            padding-bottom: 10px;
+        }
+        .card {
+            background: #10182c;
+            border-radius: 12px;
+            padding: 25px;
+            border: 1px solid rgba(0, 170, 255, 0.2);
+        }
+        .alert-list, .signatures-log-list {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        /* Styles copiés depuis l'ancien index.html pour les alertes, la carte, etc. */
+        .alert-item { display: flex; align-items: flex-start; padding: 20px; background: rgba(255, 255, 255, 0.03); border-radius: 10px; margin-bottom: 15px; border-left: 5px solid #ffaa00; }
+        .alert-icon { width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 20px; font-size: 1.3rem; flex-shrink: 0; }
+        .alert-content { flex-grow: 1; }
+        .alert-title { font-weight: 600; margin-bottom: 8px; font-size: 1.1rem; }
+        .alert-desc { font-size: 0.95rem; color: #8c9eba; margin-bottom: 8px; }
+        .alert-meta { display: flex; gap: 15px; font-size: 0.85rem; color: #8c9eba; }
+        .alert-item.critical { border-left-color: #ff3333; }
+        .alert-item.high { border-left-color: #ffaa00; }
+        .alert-item.medium { border-left-color: #00aaff; }
+        .alert-item.low { border-left-color: #00ff7f; }
+        .map-container { background: rgba(0, 0, 0, 0.2); border-radius: 12px; padding: 20px; border: 1px solid rgba(255, 255, 255, 0.1); }
+        .mali-map { width: 100%; height: auto; filter: drop-shadow(0 0 10px #00aaff); }
+        .sensor-point circle { fill: #00ff7f; stroke: #e0e0e0; stroke-width: 2; animation: pulse-sensor 2s infinite; }
+        .sensor-point.status-alert circle { fill: #ff3333; animation: pulse-alert 1s infinite; }
+        .sensor-point text { fill: #e0e0e0; font-size: 16px; text-anchor: middle; pointer-events: none; }
+        .threat-flow-line { stroke-width: 2; stroke-linecap: round; animation: draw-line 1.5s ease-out forwards; }
+        .hcs-log-list { font-family: 'Courier New', Courier, monospace; font-size: 0.9rem; }
+        .hcs-log-item { padding: 10px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
+        .log-time { color: #8c9eba; margin-right: 10px; }
+        .log-type { color: #00aaff; }
+        @keyframes pulse-sensor { 0% { r: 8; opacity: 1; } 50% { r: 14; opacity: 0.5; } 100% { r: 8; opacity: 1; } }
+        @keyframes pulse-alert { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
+        @keyframes draw-line { from { stroke-dasharray: 1000; stroke-dashoffset: 1000; } to { stroke-dasharray: 1000; stroke-dashoffset: 0; } }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <div class="header-title">
+                <i class="fas fa-shield-alt"></i>
+                <h1>SAHEL GUARD - Statut Public</h1>
+            </div>
+            <div class="status-indicator">
+                <div class="status-dot"></div>
+                <span>Système Opérationnel</span>
+            </div>
+        </header>
+        
+        <main>
+            <!-- Carte des capteurs -->
+            <section class="section" id="map-section">
+                <h2><i class="fas fa-map-marked-alt"></i> Cartographie du Réseau</h2>
+                <div class="map-container">
+                    <svg viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg" class="mali-map">
+                        <path d="M150,50 L250,30 L400,80 L500,50 L600,150 L700,250 L650,400 L500,550 L350,580 L200,500 L100,350 L120,200 Z" 
+                              fill="rgba(0, 170, 255, 0.1)" stroke="#00aaff" stroke-width="2"/>
+                        <g id="threat-origins">
+                            <circle id="origin-1" cx="50" cy="50" r="5" fill="#ff3333" opacity="0.5"/>
+                        </g>
+                        <g id="threat-flows-group"></g>
+                        <g class="sensor-point" data-id="1"><circle cx="180" cy="280" r="8"/><text x="180" y="305">Kayes</text></g>
+                        <g class="sensor-point" data-id="2"><circle cx="280" cy="380" r="8"/><text x="280" y="405">Bamako</text></g>
+                        <g class="sensor-point" data-id="3"><circle cx="360" cy="480" r="8"/><text x="360" y="505">Sikasso</text></g>
+                        <g class="sensor-point" data-id="4"><circle cx="390" cy="350" r="8"/><text x="390" y="375">Ségou</text></g>
+                        <g class="sensor-point" data-id="5"><circle cx="480" cy="290" r="8"/><text x="480" y="315">Mopti</text></g>
+                        <g class="sensor-point" data-id="6"><circle cx="600" cy="220" r="8"/><text x="600" y="245">Gao</text></g>
+                    </svg>
+                </div>
+            </section>
+
+            <!-- Dernières alertes -->
+            <section class="section" id="alert-section">
+                <h2><i class="fas fa-bell"></i> Dernières Alertes Publiques</h2>
+                <div class="card">
+                    <div class="alert-list" id="alerts-list">
+                        <p>En attente des données du réseau...</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Registre des menaces -->
+            <section class="section" id="signatures-section">
+                <h2><i class="fas fa-fingerprint"></i> Registre Public des Menaces</h2>
+                <div class="card">
+                    <div class="hcs-log-list" id="signatures-log-list">
+                        <p>En attente des signatures de menaces...</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="user.js"></script>
+</body>
+</html>
