@@ -11,7 +11,7 @@ const rewardsListElement = document.getElementById('rewards-list');
 const noAlertsElement = document.getElementById('no-alerts');
 const noRewardsElement = document.getElementById('no-rewards');
 const alertForm = document.getElementById('alert-form');
-const totalAlertsElement = document.getElementById('total-alerts');
+const totalAlertsElement = document.getElementById('total-alerts'); // Keep this
 const totalRewardsElement = document.getElementById('total-rewards');
 const rewardsCountElement = document.getElementById('rewards-count');
 
@@ -105,6 +105,11 @@ socket.on('reputation-updated', (data) => {
 socket.on('counter-measure-executed', (actionData) => {
     console.log('🛡️ Contre-mesure exécutée:', actionData);
     addCounterMeasureToUI(actionData);
+});
+
+socket.on('email-sent', (emailLogEntry) => { // <-- NOUVEAU
+    console.log('📧 Email envoyé:', emailLogEntry);
+    addEmailToUI(emailLogEntry);
 });
 
 // Gestion de l'envoi du formulaire
@@ -293,6 +298,38 @@ function addCounterMeasureToUI(actionData, animate = true) {
     if (list.children.length > 20) list.removeChild(list.lastChild);
 }
 
+// Fonction pour ajouter un email à l'UI
+function addEmailToUI(emailLogEntry, animate = true) { // <-- NOUVEAU
+    const list = document.getElementById('email-list');
+    if (!list) return;
+
+    // Vider le message d'initialisation
+    const placeholder = list.querySelector('.placeholder');
+    if (placeholder) placeholder.remove();
+
+    const item = document.createElement('div');
+    item.className = `email-item ${animate ? 'slide-in' : ''}`;
+    const formattedDate = new Date(emailLogEntry.alertData.timestamp).toLocaleTimeString('fr-FR');
+
+    const successCount = emailLogEntry.emailResults.filter(r => r.success).length;
+    const totalCount = emailLogEntry.emailResults.length;
+
+    item.innerHTML = `
+        <div class="email-icon"><i class="fas fa-envelope"></i></div>
+        <div class="email-content">
+            <div class="email-title">Notification Email envoyée</div>
+            <div class="email-details">
+                <div class="email-detail"><span>Type:</span> ${emailLogEntry.alertData.type}</div>
+                <div class="email-detail"><span>Sévérité:</span> ${emailLogEntry.alertData.severity}</div>
+                <div class="email-detail"><span>Destinataires:</span> ${successCount}/${totalCount}</div>
+            </div>
+            <div class="alert-meta"><span class="alert-time"><i class="fas fa-clock"></i> ${formattedDate}</span></div>
+        </div>
+    `;
+    list.insertBefore(item, list.firstChild);
+    if (list.children.length > 20) list.removeChild(list.lastChild);
+}
+
 // Chargement initial: récupérer les infos du topic et du token
 async function loadInitialData() {
     try {
@@ -435,8 +472,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Logique pour le panneau des paramètres ---
-    const smsToggle = document.getElementById('sms-enabled-toggle');
-    const phoneNumbersInput = document.getElementById('phone-numbers');
+    const emailToggle = document.getElementById('email-enabled-toggle'); // <-- MODIFIÉ
+    const emailAddressesInput = document.getElementById('email-addresses'); // <-- MODIFIÉ
     const aiThresholdSlider = document.getElementById('ai-threshold-slider');
     const aiThresholdValue = document.getElementById('ai-threshold-value');
     const themeToggle = document.getElementById('theme-toggle');
@@ -449,8 +486,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch('/api/settings');
             const settings = await response.json();
             
-            smsToggle.checked = settings.smsEnabled;
-            phoneNumbersInput.value = settings.alertPhoneNumbers.join(', ');
+            emailToggle.checked = settings.emailEnabled; // <-- MODIFIÉ
+            emailAddressesInput.value = settings.alertEmails.join(', '); // <-- MODIFIÉ
             aiThresholdSlider.value = settings.aiAnomalyThreshold;
             aiThresholdValue.textContent = settings.aiAnomalyThreshold;
             themeToggle.checked = settings.theme === 'dark';
@@ -471,9 +508,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (saveBtn) {
         saveBtn.addEventListener('click', async () => {
-            const newSettings = {
-                smsEnabled: smsToggle.checked,
-                alertPhoneNumbers: phoneNumbersInput.value.split(',').map(num => num.trim()).filter(Boolean),
+            const newSettings = { // <-- MODIFIÉ
+                emailEnabled: emailToggle.checked,
+                alertEmails: emailAddressesInput.value.split(',').map(email => email.trim()).filter(Boolean),
                 aiAnomalyThreshold: parseFloat(aiThresholdSlider.value),
                 theme: themeToggle.checked ? 'dark' : 'light',
                 activeResponseEnabled: activeResponseToggle.checked // <-- NOUVEAU
@@ -649,6 +686,13 @@ function addHcsLogToUI(logData, animate = true) {
     list.insertBefore(item, list.firstChild);
     if (list.children.length > 50) list.removeChild(list.lastChild);
 }
+
+// Historique des emails (pour les nouveaux clients)
+socket.on('email-log-history', (history) => { // <-- NOUVEAU
+    const list = document.getElementById('email-list');
+    if (list) list.innerHTML = '';
+    history.forEach(log => addEmailToUI(log, false));
+});
 
 function addSignatureToUI(signatureData, animate = true) {
     const list = document.getElementById('signatures-log-list');

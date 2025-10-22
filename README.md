@@ -10,16 +10,16 @@
 - **Détection de Menaces** : Un système simple d'IA et de règles métier pour analyser le trafic réseau simulé et identifier les activités suspectes.
 - **Journalisation Décentralisée** : Chaque alerte générée est enregistrée de manière immuable sur le **Hedera Consensus Service (HCS)**, garantissant un audit transparent et infalsifiable.
 - **Notifications SMS** : Envoi d'alertes critiques aux administrateurs via l'API SMS de **Vonage**.
+- **Notifications Email** : Envoi d'alertes critiques aux administrateurs via **Nodemailer**.
 - **Système de Récompenses (Simulé)** : Distribution de tokens (simulés en HBAR pour la démo) via le **Hedera Token Service (HTS)** pour récompenser les capteurs qui identifient des menaces.
 - **Cartographie des Menaces** : Visualisation géographique des capteurs et des flux de menaces détectées.
 
 ## 🛠️ Technologies Utilisées
 
 - **Backend** : Node.js, Express.js
-- **Frontend** : HTML5, CSS3, JavaScript (sans framework)
 - **Communication Temps Réel** : Socket.IO
 - **Blockchain / DLT** : Hedera SDK for JS (@hashgraph/sdk)
-- **Notifications** : Vonage Server SDK for Node.js (@vonage/server-sdk)
+- **Notifications** : Nodemailer
 - **Dépendances** : `dotenv`, `axios`
 
 ## ⚙️ Installation et Configuration
@@ -29,6 +29,7 @@
 - Node.js (v18.x ou supérieure)
 - Un compte sur le portail développeur Hedera pour obtenir un `OPERATOR_ID` et `OPERATOR_KEY`.
 - Un compte Vonage pour obtenir les clés d'API SMS.
+- Un compte de service email (ex: Gmail, Outlook, un serveur SMTP dédié) pour Nodemailer.
 
 ### Étapes d'installation
 

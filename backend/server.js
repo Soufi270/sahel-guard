@@ -7,8 +7,8 @@ const { sendHCSMessage, getTopicId, createHCSTopic, createSignatureTopic, sendSi
 const { getAnomalyDetector } = require('./ai-detection-advanced');
 const { checkBusinessRules } = require('./ai-detection-simple'); // Ré-importation des règles métier
 const reputationService = require('./sensor-reputation');
-const axios = require('axios');
-const { getSmsService } = require('./sms-service');
+const axios = require('axios'); // Keep axios for simulation
+const { getEmailService } = require('./email-service'); // <-- NOUVEAU
 const activeResponseService = require('./active-response-service'); // <-- NOUVEAU
 const { getTokenService } = require("./token-service-simple");
 require('dotenv').config();
@@ -23,7 +23,7 @@ const PORT = process.env.PORT || 3000;
 const SETTINGS_FILE_PATH = path.join(__dirname, 'settings.json');
 let settings = {
     smsEnabled: true,
-    alertPhoneNumbers: process.env.ALERT_PHONE_NUMBERS ? process.env.ALERT_PHONE_NUMBERS.split(',') : [],
+    alertEmails: process.env.ALERT_EMAILS ? process.env.ALERT_EMAILS.split(',') : [], // <-- NOUVEAU
     activeResponseEnabled: true, // <-- NOUVEAU
     aiAnomalyThreshold: 0.9,
     theme: 'dark'
@@ -54,7 +54,7 @@ function saveSettings() {
 
 // Variables pour les services
 let anomalyDetector = null;
-let smsService = null;
+let emailService = null; // <-- NOUVEAU
 let tokenService = null;
 let isServerReady = false;
 
@@ -62,7 +62,7 @@ let isServerReady = false;
 const MAX_LOG_HISTORY = 20;
 const signatureLogHistory = [];
 const hcsLogHistory = [];
-const smsLogHistory = [];
+const emailLogHistory = []; // <-- NOUVEAU
 const rewardsLogHistory = [];
 
 // Middleware pour servir les fichiers statiques
@@ -90,9 +90,9 @@ app.use(express.json());
         
         anomalyDetector = await getAnomalyDetector();
         console.log('✅ Détecteur d\'anomalies initialisé');
-        
-        smsService = getSmsService();
-        console.log('✅ Service SMS initialisé');
+
+        emailService = getEmailService(); // <-- NOUVEAU
+        console.log('✅ Service Email initialisé');
         
         tokenService = getTokenService();
         console.log('✅ Service Token initialisé');
@@ -263,20 +263,19 @@ app.post('/api/analyze', async (req, res) => {
                 }, 30000); // Retour à la normale après 30s
             }
 
-            // Envoi SMS si activé
-            if (smsService && settings.smsEnabled && alertData.severity !== 'low') {
-                const phoneNumbers = settings.alertPhoneNumbers || [];
+            // Envoi Email si activé
+            if (emailService && settings.emailEnabled && alertData.severity !== 'low') { // <-- MODIFIÉ
+                const recipientEmails = settings.alertEmails || []; // <-- MODIFIÉ
                 
-                if (phoneNumbers.length > 0) {
+                if (recipientEmails.length > 0) {
                     setTimeout(async () => {
                         try {
-                            const smsResults = await smsService.sendAlertSms(alertData, phoneNumbers);
-                            console.log(`📱 SMS envoyés: ${smsResults.filter(r => r.success).length}/${smsResults.length}`);
-                            const smsLogEntry = { alertData, smsResults };
-                            smsLogHistory.unshift(smsLogEntry);
-                            if (smsLogHistory.length > MAX_LOG_HISTORY) smsLogHistory.pop();
-
-                            io.emit('sms-sent', smsLogEntry);
+                            const emailResults = await emailService.sendAlertEmail(alertData, recipientEmails); // <-- MODIFIÉ
+                            console.log(`📧 Emails envoyés: ${emailResults.filter(r => r.success).length}/${emailResults.length}`); // <-- MODIFIÉ
+                            const emailLogEntry = { alertData, emailResults }; // <-- MODIFIÉ
+                            emailLogHistory.unshift(emailLogEntry); // <-- MODIFIÉ
+                            if (emailLogHistory.length > MAX_LOG_HISTORY) emailLogHistory.pop(); // <-- MODIFIÉ
+                            io.emit('email-sent', emailLogEntry); // <-- MODIFIÉ
                         } catch (smsError) {
                             console.error('❌ Erreur envoi SMS:', smsError);
                         }
@@ -344,7 +343,7 @@ app.get('/api/settings', (req, res) => {
 app.post('/api/settings', (req, res) => {
     settings = { ...settings, ...req.body };
     if (anomalyDetector) {
-        anomalyDetector.anomalyThreshold = settings.aiAnomalyThreshold;
+        anomalyDetector.anomalyThreshold = settings.aiAnomalyThreshold; // Keep this
     }
     // Mettre à jour le paramètre du service de réponse active
     // (Pas nécessaire pour ce service simple, mais bonne pratique pour des services plus complexes)
@@ -426,8 +425,8 @@ io.on('connection', (socket) => {
     // Envoyer l'historique des signatures
     socket.emit('signature-log-history', signatureLogHistory);
 
-    // Envoyer l'historique des SMS
-    socket.emit('sms-log-history', smsLogHistory);
+    // Envoyer l'historique des Emails
+    socket.emit('email-log-history', emailLogHistory); // <-- NOUVEAU
 
     // Envoyer l'historique des récompenses
     socket.emit('rewards-log-history', rewardsLogHistory);

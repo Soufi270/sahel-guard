@@ -1092,9 +1092,9 @@
                     <i class="fas fa-coins"></i>
                     <span>Récompenses HTS</span>
                 </li>
-                <li class="menu-item" id="menu-sms">
-                    <i class="fas fa-sms"></i>
-                    <span>Notifications SMS</span>
+                <li class="menu-item" id="menu-email">
+                    <i class="fas fa-envelope"></i>
+                    <span>Notifications Email</span>
                 </li>
                 <li class="menu-item" id="menu-map">
                     <i class="fas fa-map-marker-alt"></i>
@@ -1349,30 +1349,6 @@
                 </div>
             </div>
 
-            <div class="sms-section" id="sms-section">
-                <h2><i class="fas fa-comment-dots"></i> Journal des Notifications SMS</h2>
-                <div class="sms-list" id="sms-list">
-                    <!-- Les notifications SMS apparaîtront ici -->
-                    <div class="sms-item slide-in">
-                        <div class="sms-icon">
-                            <i class="fas fa-mobile-alt"></i>
-                        </div>
-                        <div class="sms-content">
-                            <div class="sms-title">Notification envoyée</div>
-                            <div class="sms-details">
-                                <div class="sms-detail"><span>Type:</span> auto-detected-threat</div>
-                                <div class="sms-detail"><span>Niveau:</span> high</div>
-                                <div class="sms-detail"><span>Destinataires:</span> 1</div>
-                                <div class="sms-detail"><span>Statut:</span> Simulation</div>
-                            </div>
-                            <div class="alert-meta">
-                                <span class="alert-time"><i class="fas fa-clock"></i> 19/09/2025 11:11:54</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
             <div class="rewards-section" id="rewards-section">
                 <h2><i class="fas fa-trophy"></i> Récompenses Distribuées</h2>
                 <div class="rewards-list" id="rewards-list">
@@ -1396,23 +1372,48 @@
                 </div>
             </div>
         </main>
+        
+        <!-- Section Notifications Email (NOUVEAU) -->
+        <div class="email-section" id="email-section">
+            <h2><i class="fas fa-envelope-open-text"></i> Journal des Notifications Email</h2>
+            <div class="email-list" id="email-list">
+                <!-- Les notifications Email apparaîtront ici -->
+                <div class="email-item slide-in">
+                    <div class="email-icon">
+                        <i class="fas fa-envelope"></i>
+                    </div>
+                    <div class="email-content">
+                        <div class="email-title">Notification Email envoyée</div>
+                        <div class="email-details">
+                            <div class="email-detail"><span>Type:</span> auto-detected-threat</div>
+                            <div class="email-detail"><span>Niveau:</span> high</div>
+                            <div class="email-detail"><span>Destinataires:</span> 1/1</div>
+                            <div class="email-detail"><span>Statut:</span> Succès</div>
+                        </div>
+                        <div class="alert-meta">
+                            <span class="alert-time"><i class="fas fa-clock"></i> 19/09/2025 11:11:54</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <div class="settings-section" id="settings-section">
             <h2><i class="fas fa-cogs"></i> Paramètres du Système</h2>
             
             <div class="settings-card">
-                <h3><i class="fas fa-sms"></i> Notifications SMS</h3>
+                <h3><i class="fas fa-envelope"></i> Notifications Email</h3>
                 <div class="setting-item">
-                    <label for="sms-enabled-toggle" class="toggle-label">Activer les notifications SMS</label>
+                    <label for="email-enabled-toggle" class="toggle-label">Activer les notifications Email</label>
                     <label class="switch">
-                        <input type="checkbox" id="sms-enabled-toggle">
+                        <input type="checkbox" id="email-enabled-toggle">
                         <span class="slider round"></span>
                     </label>
                 </div>
                 <div class="setting-item">
-                    <label for="phone-numbers" class="form-label">Numéros de téléphone (séparés par une virgule)</label>
-                    <textarea id="phone-numbers" class="form-control" rows="3" placeholder="Ex: +223..., 06..."></textarea>
-                    <small>Note: Seul le premier numéro de téléphone malien valide sera utilisé pour l'envoi des alertes SMS.</small>
+                    <label for="email-addresses" class="form-label">Adresses Email (séparées par une virgule)</label>
+                    <textarea id="email-addresses" class="form-control" rows="3" placeholder="Ex: admin@example.com, security@example.com"></textarea>
+                    <small>Note: Toutes les adresses email valides seront utilisées pour l'envoi des alertes.</small>
                 </div>
             </div>
 
@@ -1476,6 +1477,18 @@
         </div>
     </div>
 
+    <style>
+        /* Styles pour la section Email */
+        .email-section h2 { margin-bottom: 20px; font-size: 1.4rem; display: flex; align-items: center; gap: 10px; }
+        .email-list { max-height: 400px; overflow-y: auto; padding-right: 10px; }
+        .email-item { display: flex; align-items: flex-start; padding: 20px; background: rgba(255, 255, 255, 0.03); border-radius: 10px; margin-bottom: 15px; border-left: 5px solid #00aaff; }
+        .email-icon { width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 20px; font-size: 1.3rem; flex-shrink: 0; background: rgba(0, 170, 255, 0.2); color: #00aaff; }
+        .email-content { flex-grow: 1; }
+        .email-title { font-weight: 600; margin-bottom: 8px; font-size: 1.1rem; color: #00aaff; }
+        .email-details { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 8px; }
+        .email-detail { font-size: 0.9rem; }
+        .email-detail span { font-weight: 600; color: #b0c4ff; }
+    </style>
     <script src="/socket.io/socket.io.js"></script>
     <script src="app.js"></script>
 </body>
