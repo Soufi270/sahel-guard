@@ -89,16 +89,6 @@ let tokenService = null;
 let isServerReady = false;
 
 // --- Historique pour les nouveaux clients ---
-const MAX_LOG_HISTORY = 20;
-const signatureLogHistory = [];
-const hcsLogHistory = [];
-const emailLogHistory = []; // <-- NOUVEAU
-const rewardsLogHistory = [];
-
-// Middleware pour servir les fichiers statiques
-app.use(express.static(path.join(__dirname, '../frontend')));
-app.use(express.json());
-
 // --- NOUVELLES ROUTES POUR LES PAGES ---
 
 // Page d'accueil (portail de sélection)
@@ -128,6 +118,19 @@ app.get('/admin', ensureAuthenticated, (req, res) => {
 app.get('/user', (req, res) => {
     res.sendFile(path.join(__dirname, '../frontend/user.html'));
 });
+
+// --- MIDDLEWARES STATIQUES ET JSON ---
+// Doit être après les routes GET pour les pages HTML pour éviter les conflits.
+app.use(express.static(path.join(__dirname, '../frontend')));
+app.use(express.json());
+
+// --- HISTORIQUE POUR LES NOUVEAUX CLIENTS ---
+const MAX_LOG_HISTORY = 20;
+const signatureLogHistory = [];
+const hcsLogHistory = [];
+const emailLogHistory = [];
+const rewardsLogHistory = [];
+
 
 // Initialisation de tous les services
 (async function initializeServices() {
