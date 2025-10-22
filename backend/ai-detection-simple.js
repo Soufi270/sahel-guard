@@ -78,7 +78,7 @@ function checkBusinessRules(networkData) {
         },
         {
             name: "Trafic entrant anormal depuis l'étranger",
-            condition: (data) => data.sourceIP && !data.sourceIP.startsWith('196.'),
+            condition: (data) => data.sourceIP && !data.sourceIP.startsWith('196.') && (data.sourceIP.startsWith('154.') || data.sourceIP.startsWith('201.') || data.sourceIP.startsWith('103.') || data.sourceIP.startsWith('45.')),
             severity: 'high'
         }
     ];
