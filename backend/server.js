@@ -198,8 +198,13 @@ app.post('/api/login', async (req, res) => {
     }
 
     // 3. Créer la session
-    req.session.user = { email: email };
-    res.json({ success: true, message: "Connexion réussie." });
+    req.session.user = { email: email.toLowerCase() };
+    req.session.save((err) => {
+        if (err) {
+            return res.status(500).json({ error: "Erreur lors de la sauvegarde de la session." });
+        }
+        res.json({ success: true, message: "Connexion réussie." });
+    });
 });
 
 app.post('/api/logout', (req, res) => {
