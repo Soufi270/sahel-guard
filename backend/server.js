@@ -101,6 +101,11 @@ app.get('/login', (req, res) => {
     res.sendFile(path.join(__dirname, '../frontend/login.html'));
 });
 
+// --- MIDDLEWARES STATIQUES ET JSON ---
+// Doit être AVANT les routes GET pour les pages HTML pour servir correctement CSS/JS.
+app.use(express.static(path.join(__dirname, '../frontend')));
+app.use(express.json());
+
 // Middleware pour protéger les routes admin
 const ensureAuthenticated = (req, res, next) => {
     if (req.session.user) {
@@ -118,11 +123,6 @@ app.get('/admin', ensureAuthenticated, (req, res) => {
 app.get('/user', (req, res) => {
     res.sendFile(path.join(__dirname, '../frontend/user.html'));
 });
-
-// --- MIDDLEWARES STATIQUES ET JSON ---
-// Doit être après les routes GET pour les pages HTML pour éviter les conflits.
-app.use(express.static(path.join(__dirname, '../frontend')));
-app.use(express.json());
 
 // --- HISTORIQUE POUR LES NOUVEAUX CLIENTS ---
 const MAX_LOG_HISTORY = 20;
