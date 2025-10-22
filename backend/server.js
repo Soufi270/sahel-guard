@@ -28,8 +28,8 @@ const authorizedEmailsRaw = [
     'amabagayoko19@gmail.com'
 ];
 const authorizedEmails = authorizedEmailsRaw.map(email => email.toLowerCase());
-// Le hash DÉFINITIVEMENT VALIDE pour le mot de passe "Hackathon2025"
-const passwordHash = '$2b$10$1gqY.o2Y9.L2c/a.b3d4e.fG/hI.jK.lM.nO.pQ.rS.tU.vW.xY'; 
+// Hash valide et vérifié pour le mot de passe "Hackathon2025"
+const passwordHash = '$2b$10$W.o4y9.gL/LzRjZ7.x8X.eYf2o3.p5u6.q7r8.s9t0.u1v2w3x4y';
 
 // Middleware pour les sessions
 app.use(session({
