@@ -129,45 +129,6 @@ app.get('/user', (req, res) => {
     res.sendFile(path.join(__dirname, '../frontend/user.html'));
 });
 
-// --- NOUVELLES ROUTES POUR LES PAGES ---
-
-// Page d'accueil (portail de sélection)
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, '../frontend/index.html'));
-});
-
-// Page de connexion
-app.get('/login', (req, res) => {
-    res.sendFile(path.join(__dirname, '../frontend/login.html'));
-});
-
-// Middleware pour protéger les routes admin
-const ensureAuthenticated = (req, res, next) => {
-    if (req.session.user) {
-        return next();
-    }
-    res.redirect('/login');
-};
-
-// Page Administrateur (maintenant sur /admin)
-app.get('/admin', ensureAuthenticated, (req, res) => {
-    res.sendFile(path.join(__dirname, '../frontend/admin.html'));
-});
-
-// Page Utilisateur
-app.get('/user', (req, res) => {
-    res.sendFile(path.join(__dirname, '../frontend/user.html'));
-});
-
-// --- Historique pour les nouveaux clients ---
-const MAX_LOG_HISTORY = 20;
-const signatureLogHistory = [];
-
-// --- Variables pour la temporisation des emails ---
-let isEmailThrottled = false;
-let alertBuffer = [];
-let emailThrottlingTimeout = null;
-
 // Initialisation de tous les services
 (async function initializeServices() {
     try {
