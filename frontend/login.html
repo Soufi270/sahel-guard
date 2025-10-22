@@ -79,6 +79,15 @@
             color: var(--text-muted);
         }
 
+        .input-group .toggle-password {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            cursor: pointer;
+        }
+
         .input-group input {
             width: 100%;
             padding: 12px 12px 12px 45px;
@@ -135,6 +144,7 @@
             <div class="input-group">
                 <i class="fas fa-lock"></i>
                 <input type="password" id="password" placeholder="Mot de passe" required>
+                <i class="fas fa-eye toggle-password" id="toggle-password"></i>
             </div>
             <button type="submit" class="login-btn">Connexion</button>
             <div id="error-message" class="error-message"></div>
@@ -144,6 +154,20 @@
     <script>
         const form = document.getElementById('login-form');
         const errorMessage = document.getElementById('error-message');
+        const passwordInput = document.getElementById('password');
+        const togglePassword = document.getElementById('toggle-password');
+
+        togglePassword.addEventListener('click', function () {
+            // Basculer le type de l'input entre 'password' et 'text'
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+
+            // Changer l'icône de l'œil
+            this.classList.toggle('fa-eye');
+            this.classList.toggle('fa-eye-slash');
+        });
+
+
 
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
