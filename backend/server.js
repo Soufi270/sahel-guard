@@ -165,8 +165,9 @@ const rewardsLogHistory = [];
         isServerReady = true;
 
         // Démarrage du serveur UNIQUEMENT après une initialisation réussie
-        server.listen(PORT, () => {
-            console.log(`🚀 Serveur démarré et prêt sur http://localhost:${PORT}`);
+        const HOST = process.env.NODE_ENV === 'production' ? '0.0.0.0' : 'localhost';
+        server.listen(PORT, HOST, () => {
+            console.log(`🚀 Serveur démarré et prêt sur http://${HOST}:${PORT}`);
         });
 
     } catch (error) {
@@ -212,19 +213,22 @@ app.post('/api/logout', (req, res) => {
 const suspiciousIPs = [
     `154.16.10.25`, `201.8.45.112`, `103.56.12.9`, `45.12.189.44`
 ];
-function simulateNetworkTraffic() {
+async function simulateNetworkTraffic() {
     const networkData = {
         sourceIP: suspiciousIPs[Math.floor(Math.random() * suspiciousIPs.length)],
         protocol: Math.random() > 0.5 ? 'TCP' : 'UDP',
         packetSize: Math.floor(Math.random() * 1500),
         sensorId: Math.floor(Math.random() * 6) + 1,
         destinationIP: `10.0.0.${Math.floor(Math.random() * 255)}`,
-        destinationPort: [21, 22, 80, 443, 3389, 8080][Math.floor(Math.random() * 6)]
+        destinationPort: [21, 22, 80, 443, 3389, 8080][Math.floor(Math.random() * 6)],
     };
 
-    // Simule un appel à l'API d'analyse en utilisant axios
-    axios.post(`http://localhost:${PORT}/api/analyze`, networkData)
-        .catch(error => console.error('Erreur de simulation interne:', error.message));
+    // Appel direct de la logique d'analyse au lieu d'un appel HTTP
+    try {
+        await analyzeTraffic(networkData);
+    } catch (error) {
+        console.error('Erreur de simulation interne:', error.message);
+    }
 }
 
 // Route pour envoyer une alerte manuellement
@@ -260,10 +264,10 @@ app.post('/api/alert', async (req, res) => {
 });
 
 // Route pour l'analyse en temps réel avec IA
-app.post('/api/analyze', async (req, res) => {
+async function analyzeTraffic(networkData) {
     try {
-        const networkData = req.body;
-        
+        // La logique d'analyse est maintenant dans une fonction réutilisable
+
         if (!anomalyDetector) {
             return res.status(503).json({ 
                 error: "Système IA non initialisé" 
@@ -450,14 +454,22 @@ app.post('/api/analyze', async (req, res) => {
             }
         }
 
-        res.json(finalDecision);
+        return finalDecision; // Retourne la décision pour la simulation
 
     } catch (error) {
         console.error('Erreur analyse:', error);
-        res.status(500).json({ 
-            error: "Erreur lors de l'analyse",
-            details: error.message 
-        });
+        // Si c'est un appel HTTP, on renvoie une erreur. Sinon, l'erreur est déjà loggée.
+        throw error;
+    }
+}
+
+app.post('/api/analyze', async (req, res) => {
+    try {
+        const networkData = req.body;
+        const finalDecision = await analyzeTraffic(networkData);
+        res.json(finalDecision);
+    } catch (error) {
+        res.status(500).json({ error: "Erreur lors de l'analyse", details: error.message });
     }
 });
 
