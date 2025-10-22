@@ -87,20 +87,7 @@ let anomalyDetector = null;
 let emailService = null; // <-- NOUVEAU
 let tokenService = null;
 let isServerReady = false;
-
-// --- Historique pour les nouveaux clients ---
-// --- NOUVELLES ROUTES POUR LES PAGES ---
-
-// Page d'accueil (portail de sélection)
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, '../frontend/index.html'));
-});
-
-// Page de connexion
-app.get('/login', (req, res) => {
-    res.sendFile(path.join(__dirname, '../frontend/login.html'));
-});
-
+ 
 // --- MIDDLEWARES STATIQUES ET JSON ---
 // Doit être AVANT les routes GET pour les pages HTML pour servir correctement CSS/JS.
 app.use(express.static(path.join(__dirname, '../frontend')));
@@ -113,6 +100,18 @@ const ensureAuthenticated = (req, res, next) => {
     }
     res.redirect('/login');
 };
+
+// --- NOUVELLES ROUTES POUR LES PAGES ---
+
+// Page d'accueil (portail de sélection)
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, '../frontend/index.html'));
+});
+
+// Page de connexion
+app.get('/login', (req, res) => {
+    res.sendFile(path.join(__dirname, '../frontend/login.html'));
+});
 
 // Page Administrateur (maintenant sur /admin)
 app.get('/admin', ensureAuthenticated, (req, res) => {
