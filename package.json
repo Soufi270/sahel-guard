@@ -16,8 +16,10 @@
     "@hashgraph/sdk": "^2.72.0",
     "@sendgrid/mail": "^8.1.6",
     "axios": "^1.12.2",
+    "bcrypt": "^6.0.0",
     "dotenv": "^17.2.2",
     "express": "^5.1.0",
+    "express-session": "^1.18.2",
     "nodemailer": "^6.9.14",
     "socket.io": "^4.8.1"
   }

@@ -3,6 +3,8 @@ const http = require('http');
 const fs = require('fs');
 const socketIo = require('socket.io');
 const path = require('path');
+const session = require('express-session'); // NOUVEAU
+const bcrypt = require('bcrypt'); // NOUVEAU
 const { sendHCSMessage, getTopicId, createHCSTopic, createSignatureTopic, sendSignatureMessage } = require("./hedera-config");
 const { getAnomalyDetector } = require('./ai-detection-advanced');
 const { checkBusinessRules } = require('./ai-detection-simple'); // Ré-importation des règles métier
@@ -16,6 +18,26 @@ require('dotenv').config();
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
+
+// --- Configuration de l'authentification ---
+const authorizedEmails = [
+    'layesouf@gmail.com',
+    'garikosouleymane6@gmail.com',
+    'moulayehassaneii@gmail.com',
+    'amabagayoko19@gmail.com'
+];
+const passwordHash = '$2b$10$f/O.l4Vz.vYf3oZ5nZ.L9uH2/aHlUaN.bYnJgQzJ.dYgXkZ.aB.cO'; 
+
+// Middleware pour les sessions
+app.use(session({
+    secret: process.env.SESSION_SECRET || 'un-secret-tres-secret-pour-le-hackathon',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+        secure: process.env.NODE_ENV === 'production', // Mettre à true en production (HTTPS)
+        maxAge: 24 * 60 * 60 * 1000 // 24 heures
+    }
+}));
 
 const PORT = process.env.PORT || 3000;
 
@@ -128,14 +150,60 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, '../frontend/index.html'));
 });
 
+// Page de connexion
+app.get('/login', (req, res) => {
+    res.sendFile(path.join(__dirname, '../frontend/login.html'));
+});
+
+// Middleware pour protéger les routes admin
+const ensureAuthenticated = (req, res, next) => {
+    if (req.session.user) {
+        return next();
+    }
+    res.redirect('/login');
+};
+
 // Page Administrateur (maintenant sur /admin)
-app.get('/admin', (req, res) => {
+app.get('/admin', ensureAuthenticated, (req, res) => {
     res.sendFile(path.join(__dirname, '../frontend/admin.html'));
 });
 
 // Page Utilisateur
 app.get('/user', (req, res) => {
     res.sendFile(path.join(__dirname, '../frontend/user.html'));
+});
+
+// --- API D'AUTHENTIFICATION ---
+app.post('/api/login', async (req, res) => {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+        return res.status(400).json({ error: "Email et mot de passe requis." });
+    }
+
+    // 1. Vérifier si l'email est autorisé
+    if (!authorizedEmails.includes(email.toLowerCase())) {
+        return res.status(401).json({ error: "Email ou mot de passe incorrect." });
+    }
+
+    // 2. Vérifier le mot de passe
+    const isMatch = await bcrypt.compare(password, passwordHash);
+    if (!isMatch) {
+        return res.status(401).json({ error: "Email ou mot de passe incorrect." });
+    }
+
+    // 3. Créer la session
+    req.session.user = { email: email };
+    res.json({ success: true, message: "Connexion réussie." });
+});
+
+app.post('/api/logout', (req, res) => {
+    req.session.destroy((err) => {
+        if (err) {
+            return res.status(500).json({ error: "Impossible de se déconnecter." });
+        }
+        res.redirect('/login');
+    });
 });
 
 // --- Simulation de trafic réseau (côté serveur) ---
