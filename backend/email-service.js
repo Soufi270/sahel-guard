@@ -46,9 +46,10 @@ class EmailService {
                     text: textBody,
                     html: htmlBody,
                 };
-                const info = await sgMail.send(msg);
-                console.log(`✅ Email envoyé avec succès à ${email}. Message ID: ${info.messageId}`);
-                results.push({ email, success: true, messageId: info.messageId });
+                const [response, body] = await sgMail.send(msg); // Déstructuration de la réponse
+                const messageId = response.headers['x-message-id']; // Récupération de l'ID du message
+                console.log(`✅ Email envoyé avec succès à ${email}. Message ID: ${messageId}`);
+                results.push({ email, success: true, messageId: messageId });
             } catch (error) {
                 let detailedError = error.message;
                 let statusCode = '';
@@ -158,9 +159,10 @@ class EmailService {
                 text: textBody,
                 html: htmlBody,
             };
-            const info = await sgMail.send(msg);
-            console.log(`✅ Email de synthèse envoyé avec succès. Message ID: ${info.messageId}`);
-            return { success: true, messageId: info.messageId, alertsSent: bufferedAlerts.length };
+            const [response, body] = await sgMail.send(msg); // Déstructuration de la réponse
+            const messageId = response.headers['x-message-id']; // Récupération de l'ID du message
+            console.log(`✅ Email de synthèse envoyé avec succès. Message ID: ${messageId}`);
+            return { success: true, messageId: messageId, alertsSent: bufferedAlerts.length };
         } catch (error) {
             let detailedError = error.message;
             let statusCode = '';
