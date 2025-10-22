@@ -128,8 +128,8 @@ class EmailService {
             <p style="margin-top: 20px; font-size: 0.9em; color: #8c9eba;">
                 Pour une analyse plus approfondie et des actions correctives, veuillez consulter votre tableau de bord SAHEL GUARD.
             </p>
-            <p style="text-align: center; margin-top: 30px; font-size: 0.8em; color: #555;">
-                Ceci est un message automatique. Veuillez ne pas y répondre.
+            <p style="text-align: center; margin-top: 30px; font-size: 0.8em; color: #667;">
+                Ceci est un message automatique. Pour ne plus recevoir ces alertes, <a href="<%asm_group_unsubscribe_url%>" style="color: #00aaff;">cliquez ici</a>.
             </p>
         </div>
         `;
@@ -223,7 +223,9 @@ Pour plus de détails, consultez le tableau de bord SAHEL GUARD.
                 <thead style="background-color: #10182c;"><tr><th style="padding: 10px; border: 1px solid rgba(0, 170, 255, 0.1);">Sévérité</th><th style="padding: 10px; border: 1px solid rgba(0, 170, 255, 0.1);">Type</th><th style="padding: 10px; border: 1px solid rgba(0, 170, 255, 0.1);">Source</th><th style="padding: 10px; border: 1px solid rgba(0, 170, 255, 0.1);">Heure</th></tr></thead>
                 <tbody>${alertRows}</tbody>
             </table>
-            <p style="margin-top: 20px; font-size: 0.9em; color: #8c9eba;">Pour une analyse détaillée, veuillez consulter votre tableau de bord SAHEL GUARD.</p>
+            <p style="margin-top: 20px; font-size: 0.9em; color: #8c9eba;">Pour une analyse détaillée, veuillez consulter votre tableau de bord SAHEL GUARD.</p><p style="text-align: center; margin-top: 30px; font-size: 0.8em; color: #667;">
+                Pour ne plus recevoir ces alertes, <a href="<%asm_group_unsubscribe_url%>" style="color: #00aaff;">cliquez ici</a>.
+            </p>
         </div>
         `;
     }
