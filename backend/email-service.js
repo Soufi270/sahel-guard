@@ -14,10 +14,6 @@ class EmailService {
         }
     }
 
-    isConfigured() {
-        return this.isConfigured;
-    }
-
     /**
      * Envoie un email d'alerte.
      * @param {object} alertData - Les données de l'alerte.
@@ -25,7 +21,7 @@ class EmailService {
      * @returns {Promise<object[]>} Résultats de l'envoi pour chaque destinataire.
      */
     async sendAlertEmail(alertData, recipientEmails) {
-        if (!this.isConfigured()) {
+        if (!this.isConfigured) {
             console.error('❌ Impossible d\'envoyer l\'email: le service n\'est pas configuré.');
             return recipientEmails.map(email => ({ email, success: false, error: 'Email service not configured' }));
         }
@@ -137,7 +133,7 @@ class EmailService {
      * @returns {Promise<object>} Résultat de l'envoi.
      */
     async sendDigestEmail(bufferedAlerts, recipientEmails) {
-        if (!this.isConfigured() || bufferedAlerts.length === 0) {
+        if (!this.isConfigured || bufferedAlerts.length === 0) {
             return { success: false, error: 'Service non configuré ou pas d\'alertes à envoyer.' };
         }
 
