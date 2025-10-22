@@ -1,28 +1,21 @@
-const nodemailer = require('nodemailer');
+const sgMail = require('@sendgrid/mail');
 
 class EmailService {
     constructor() {
-        this.transporter = null;
+        this.isConfigured = false;
         this.senderEmail = process.env.EMAIL_SENDER_ADDRESS;
 
-        if (process.env.EMAIL_HOST && process.env.EMAIL_PORT && process.env.EMAIL_USER && process.env.EMAIL_PASS && this.senderEmail) {
-            this.transporter = nodemailer.createTransport({
-                host: process.env.EMAIL_HOST,
-                port: parseInt(process.env.EMAIL_PORT, 10),
-                secure: process.env.EMAIL_SECURE === 'true', // Use 'true' or 'false' in .env
-                auth: {
-                    user: process.env.EMAIL_USER,
-                    pass: process.env.EMAIL_PASS,
-                },
-            });
-            console.log('📧 Service Email configuré et activé.');
+        if (process.env.SENDGRID_API_KEY && this.senderEmail) {
+            sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+            this.isConfigured = true;
+            console.log('📧 Service Email configuré avec SendGrid.');
         } else {
-            console.warn('⚠️ Service Email non configuré (variables d\'environnement manquantes pour Nodemailer).');
+            console.warn('⚠️ Service Email non configuré (SENDGRID_API_KEY ou EMAIL_SENDER_ADDRESS manquant).');
         }
     }
 
     isConfigured() {
-        return this.transporter !== null;
+        return this.isConfigured;
     }
 
     /**
@@ -50,13 +43,14 @@ class EmailService {
         for (const email of recipientEmails) {
             try {
                 console.log(`📧 Tentative d'envoi d'email à ${email}`);
-                const info = await this.transporter.sendMail({
-                    from: this.senderEmail,
+                const msg = {
                     to: email,
+                    from: this.senderEmail,
                     subject: subject,
                     text: textBody,
                     html: htmlBody,
-                });
+                };
+                const info = await sgMail.send(msg);
                 console.log(`✅ Email envoyé avec succès à ${email}. Message ID: ${info.messageId}`);
                 results.push({ email, success: true, messageId: info.messageId });
             } catch (error) {
@@ -153,13 +147,14 @@ class EmailService {
 
         try {
             console.log(`📧 Tentative d'envoi d'un email de synthèse à ${recipientEmails.join(', ')}`);
-            const info = await this.transporter.sendMail({
+            const msg = {
+                to: recipientEmails,
                 from: this.senderEmail,
-                to: recipientEmails.join(', '),
                 subject: subject,
                 text: textBody,
                 html: htmlBody,
-            });
+            };
+            const info = await sgMail.send(msg);
             console.log(`✅ Email de synthèse envoyé avec succès. Message ID: ${info.messageId}`);
             return { success: true, messageId: info.messageId, alertsSent: bufferedAlerts.length };
         } catch (error) {

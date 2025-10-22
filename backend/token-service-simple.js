@@ -1,4 +1,5 @@
 const { getHederaClient } = require("./hedera-config");
+const reputationService = require('./sensor-reputation'); // Importer le service de réputation
 require('dotenv').config();
 
 class SimpleRewardTokenService {
@@ -28,6 +29,9 @@ class SimpleRewardTokenService {
     }
 
     async rewardAnomalyDetection(sensorAccountId, alertData) {
+        const sensorId = parseInt(sensorAccountId.split('.').pop()) - 1000;
+        const reputation = reputationService.getReputation(sensorId);
+
         const rewardAmounts = {
             critical: 100,
             high: 50,
@@ -35,10 +39,12 @@ class SimpleRewardTokenService {
             low: 10
         };
 
-        const amount = rewardAmounts[alertData.severity] || 10;
+        const baseAmount = rewardAmounts[alertData.severity] || 10;
+        const finalAmount = Math.round(baseAmount * reputation.multiplier); // Appliquer le multiplicateur
+
         const reason = `Détection ${alertData.type} - Niveau ${alertData.severity}`;
 
-        return await this.distributeReward(sensorAccountId, amount, reason);
+        return await this.distributeReward(sensorAccountId, finalAmount, reason);
     }
 
     getTokenInfo() {

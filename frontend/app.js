@@ -578,7 +578,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <span class="modal-item-value">${reputation.alerts}</span>
                     </div>
                      <div class="modal-item">
-                        <span class="modal-item-label">Multiplicateur de Récompense</span>
+                        <span class="modal-item-label">Bonus de Récompense</span>
                         <span class="modal-item-value">x${reputation.multiplier || 1.0}</span>
                     </div>
                 </div>

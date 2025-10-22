@@ -6,6 +6,7 @@
  */
 
 const blockedIPs = new Set();
+const reputationService = require('./sensor-reputation'); // Importer le service de réputation
 
 class ActiveResponseService {
     constructor() {
@@ -22,6 +23,14 @@ class ActiveResponseService {
         // Décision : On n'agit que sur les menaces de sévérité 'high' ou 'critical'
         if (alertData.severity !== 'high' && alertData.severity !== 'critical') {
             console.log(`[Réponse Active] Menace de niveau '${alertData.severity}' ignorée, aucune action automatique.`);
+            return null;
+        }
+
+        // --- NOUVEAU : Vérification de la réputation du capteur ---
+        const sensorId = networkData.sensorId;
+        const reputation = reputationService.getReputation(sensorId);
+        if (reputation.level === 'Bronze') {
+            console.log(`[Réponse Active] Menace détectée par un capteur de niveau Bronze. Action automatique suspendue pour vérification.`);
             return null;
         }
 
