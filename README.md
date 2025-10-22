@@ -20,7 +20,7 @@
 - **Communication Temps Réel** : Socket.IO
 - **Blockchain / DLT** : Hedera SDK for JS (@hashgraph/sdk)
 - **Notifications** : Nodemailer
-- **Dépendances** : `dotenv`, `axios`
+- **Dépendances** : `dotenv`, `axios`, `nodemailer`
 
 ## ⚙️ Installation et Configuration
 
