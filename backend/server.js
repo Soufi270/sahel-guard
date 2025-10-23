@@ -60,7 +60,6 @@ let settings = {
     alertEmails: process.env.ALERT_EMAILS ? process.env.ALERT_EMAILS.split(',') : [],
     activeResponseEnabled: true,
     aiAnomalyThreshold: 0.9,
-    emailDigestEnabled: true, // Activer le mode synthèse
     emailDigestMinutes: 5,    // Envoyer une synthèse toutes les 5 minutes
     theme: 'dark'
 };
@@ -94,10 +93,8 @@ let emailService = null; // <-- NOUVEAU
 let tokenService = null;
 let isServerReady = false;
 
-// --- Variables pour la temporisation des emails ---
-let alertBuffer = [];
-let isEmailThrottled = false;
-let emailThrottlingTimeout = null;
+// --- Variable pour la temporisation des emails (anti-flood) ---
+let lastEmailSentTime = 0;
  
 // --- MIDDLEWARES STATIQUES ET JSON ---
 // Doit être AVANT les routes GET pour les pages HTML pour servir correctement CSS/JS.
@@ -381,42 +378,13 @@ async function analyzeTraffic(networkData) {
                 const recipientEmails = settings.alertEmails || [];
                 
                 if (recipientEmails.length > 0) {
-                    if (settings.emailDigestEnabled) {
-                        // Mode Synthèse activé
-                        alertBuffer.push(alertData); // Ajouter l'alerte au tampon
+                    const now = Date.now();
+                    const cooldown = (settings.emailDigestMinutes || 15) * 60 * 1000;
 
-                        if (!isEmailThrottled) {
-                            // Si pas en cours de temporisation, on envoie la première alerte immédiatement
-                            console.log('📧 Envoi de l\'alerte email immédiate et début de la temporisation.');
-                            isEmailThrottled = true;
-                            
-                            // Envoyer la première alerte
-                            const firstAlert = alertBuffer.shift(); // On retire la première alerte pour l'envoyer
-                            if (firstAlert) {
-                                emailService.sendAlertEmail(firstAlert, recipientEmails)
-                                    .then(emailResults => {
-                                        const emailLogEntry = { alertData: firstAlert, emailResults };
-                                        emailLogHistory.unshift(emailLogEntry);
-                                        if (emailLogHistory.length > MAX_LOG_HISTORY) emailLogHistory.pop();
-                                        io.emit('email-sent', emailLogEntry);
-                                    })
-                                    .catch(err => console.error('❌ Erreur envoi email immédiat:', err));
-                            }
+                    if (now - lastEmailSentTime > cooldown) {
+                        console.log(`📧 Envoi d'un email d'alerte. Prochain envoi possible dans ${settings.emailDigestMinutes || 15} minutes.`);
+                        lastEmailSentTime = now; // Mettre à jour l'heure du dernier envoi
 
-                            // Programmer l'envoi de la synthèse
-                            emailThrottlingTimeout = setTimeout(() => {
-                                if (alertBuffer.length > 0) {
-                                    console.log(`📧 Fin de la temporisation. Envoi d'une synthèse de ${alertBuffer.length} alerte(s).`);
-                                    emailService.sendDigestEmail(alertBuffer, recipientEmails);
-                                    alertBuffer = []; // Vider le tampon
-                                } else {
-                                    console.log('📧 Fin de la temporisation. Aucune nouvelle alerte à synthétiser.');
-                                }
-                                isEmailThrottled = false; // Fin de la temporisation
-                            }, settings.emailDigestMinutes * 60 * 1000);
-                        }
-                    } else {
-                        // Mode normal : envoyer un email pour chaque alerte
                         emailService.sendAlertEmail(alertData, recipientEmails)
                             .then(emailResults => {
                                 console.log(`📧 Emails envoyés: ${emailResults.filter(r => r.success).length}/${emailResults.length}`);
@@ -426,6 +394,8 @@ async function analyzeTraffic(networkData) {
                                 io.emit('email-sent', emailLogEntry);
                             })
                             .catch(err => console.error('❌ Erreur envoi email:', err));
+                    } else {
+                        console.log(`🚫 Email non envoyé. Respect de la temporisation de ${settings.emailDigestMinutes || 15} minutes.`);
                     }
                 } else {
                     console.warn('⚠️ Email activé mais aucune adresse de destinataire configurée dans les paramètres ou la variable d\'environnement ALERT_EMAILS.');
