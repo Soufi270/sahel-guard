@@ -600,6 +600,26 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 });
 
+// --- Logique pour le bouton de déconnexion ---
+document.addEventListener('DOMContentLoaded', () => {
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', async () => {
+            try {
+                const response = await fetch('/api/logout', { method: 'POST' });
+                // La redirection est gérée par le serveur, mais on s'assure que le client suit.
+                if (response.redirected) {
+                    window.location.href = response.url;
+                } else {
+                    window.location.href = '/login'; // Fallback
+                }
+            } catch (error) {
+                console.error('Erreur lors de la déconnexion:', error);
+            }
+        });
+    }
+});
+
 // --- Logique de visualisation des flux de menaces sur la carte ---
 const threatFlowsGroup = document.getElementById('threat-flows-group');
 const threatOrigins = Array.from(document.querySelectorAll('#threat-origins circle'));
