@@ -14,6 +14,29 @@ class ActiveResponseService {
     }
 
     /**
+     * Génère une raison plus descriptive pour l'action de contre-mesure.
+     * @param {object} alertData - Les données de l'alerte.
+     * @returns {string} La raison formatée.
+     */
+    _getFormattedReason(alertData) {
+        const { severity, type, description } = alertData;
+
+        const reasonTemplates = {
+            critical: `Réponse immédiate à une menace critique (${type}).`,
+            high: `Activité malveillante de niveau élevé détectée (${type}).`,
+            ddos: `Atténuation d'une attaque par déni de service probable.`,
+            intrusion: `Isolation de la source suite à une tentative d'intrusion.`,
+            malware: `Mise en quarantaine de la source suspectée de distribuer un malware.`,
+            phishing: `Blocage de l'origine d'une campagne de phishing.`
+        };
+
+        // Choisir un modèle spécifique si disponible, sinon un modèle générique basé sur la sévérité
+        const template = reasonTemplates[type] || reasonTemplates[severity] || `Menace de niveau '${severity}' détectée.`;
+        
+        return `${template} Description: ${description}`;
+    }
+
+    /**
      * Exécute une contre-mesure basée sur les données de la menace.
      * @param {object} alertData - Les données de l'alerte.
      * @param {object} networkData - Les données réseau originales.
@@ -52,7 +75,7 @@ class ActiveResponseService {
         const action = {
             action: 'BLOCK_IP',
             target: ipToBlock,
-            reason: `Menace de niveau '${alertData.severity}' détectée: ${alertData.description}`,
+            reason: this._getFormattedReason(alertData),
             timestamp: Date.now(),
             simulated: true
         };
