@@ -11,9 +11,10 @@ const rewardsListElement = document.getElementById('rewards-list');
 const noAlertsElement = document.getElementById('no-alerts');
 const noRewardsElement = document.getElementById('no-rewards');
 const alertForm = document.getElementById('alert-form');
-const totalAlertsElement = document.getElementById('total-alerts'); // Keep this
+const totalAlertsElement = document.getElementById('total-alerts');
 const totalRewardsElement = document.getElementById('total-rewards');
-const rewardsCountElement = document.getElementById('rewards-count');
+const totalAlertsCardElement = document.getElementById('total-alerts-card');
+const totalRewardsCardElement = document.getElementById('total-rewards-card');
 
 // Variables globales
 let totalAlerts = 0;
@@ -379,11 +380,14 @@ function updateStats() {
     if (totalAlertsElement) {
         totalAlertsElement.textContent = totalAlerts;
     }
+    if (totalAlertsCardElement) {
+        totalAlertsCardElement.textContent = totalAlerts;
+    }
     if (totalRewardsElement) {
         totalRewardsElement.textContent = Math.round(totalRewards);
     }
-    if (rewardsCountElement) {
-        rewardsCountElement.textContent = Math.round(totalRewards);
+    if (totalRewardsCardElement) {
+        totalRewardsCardElement.textContent = Math.round(totalRewards);
     }
 }
 
@@ -446,19 +450,20 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    const dashboardMenu = document.querySelector('.sidebar-menu .menu-item:first-child');
-    if (dashboardMenu) dashboardMenu.addEventListener('click', (e) => {
-        e.preventDefault();
-        setActiveMenuItem(dashboardMenu);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    });
-
     const settingsMenu = document.getElementById('menu-settings');
     if (settingsMenu) settingsMenu.addEventListener('click', (e) => {
         e.preventDefault();
         setActiveMenuItem(settingsMenu);
         mainContent.style.display = 'none';
         settingsSection.style.display = 'block';
+    });
+
+    // --- CORRECTION : Logique pour le menu Tableau de Bord ---
+    const dashboardMenu = document.querySelector('.sidebar-menu .menu-item:first-child');
+    if (dashboardMenu) dashboardMenu.addEventListener('click', (e) => {
+        e.preventDefault();
+        setActiveMenuItem(dashboardMenu);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     });
 
     // --- Logique pour le bouton "Simuler une Alerte" dans le header ---
@@ -538,33 +543,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     loadSettingsToUI();
 
-    // --- CORRECTION : Logique pour le bouton Enregistrer ---
-    if (saveBtn) {
-        saveBtn.addEventListener('click', async () => {
-            const newSettings = {
-                emailEnabled: emailToggle.checked,
-                alertEmails: emailAddressesInput.value.split(',').map(email => email.trim()).filter(Boolean),
-                emailDigestMinutes: parseInt(emailDigestMinutesInput.value, 10),
-                aiAnomalyThreshold: parseFloat(aiThresholdSlider.value),
-                theme: themeToggle.checked ? 'dark' : 'light',
-                activeResponseEnabled: activeResponseToggle.checked
-            };
-
-            const response = await fetch('/api/settings', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(newSettings)
-            });
-            const result = await response.json();
-            if (result.success) {
-                alert('Paramètres sauvegardés !');
-                document.body.style.setProperty('--primary', newSettings.theme === 'dark' ? '#0a0a1a' : '#f4f7f9');
-            } else {
-                alert('Erreur lors de la sauvegarde.');
-            }
-        });
-    }
-    
     // --- Logique pour la modale des capteurs ---
     const modal = document.getElementById('sensor-modal');
     const modalCloseBtn = document.querySelector('.close-button');
@@ -622,16 +600,13 @@ document.addEventListener('DOMContentLoaded', () => {
             modal.style.display = 'none';
         }
     };
-});
 
-// --- Logique pour le bouton de déconnexion ---
-document.addEventListener('DOMContentLoaded', () => {
+    // --- Logique pour le bouton de déconnexion ---
     const logoutBtn = document.getElementById('logout-btn');
     if (logoutBtn) {
         logoutBtn.addEventListener('click', async () => {
             try {
                 const response = await fetch('/api/logout', { method: 'POST' });
-                // La redirection est gérée par le serveur, mais on s'assure que le client suit.
                 if (response.redirected) {
                     window.location.href = response.url;
                 } else {
