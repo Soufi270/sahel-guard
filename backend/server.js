@@ -20,6 +20,10 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
 
+// --- Configuration pour la production derrière un reverse proxy (Render) ---
+app.set('trust proxy', 1); // Indispensable pour que les cookies de session fonctionnent en HTTPS
+
+
 // --- Configuration de l'authentification ---
 const authorizedEmailsRaw = [
     'layesouf@gmail.com',
