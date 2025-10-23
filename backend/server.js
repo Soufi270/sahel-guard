@@ -93,6 +93,11 @@ let anomalyDetector = null;
 let emailService = null; // <-- NOUVEAU
 let tokenService = null;
 let isServerReady = false;
+
+// --- Variables pour la temporisation des emails ---
+let alertBuffer = [];
+let isEmailThrottled = false;
+let emailThrottlingTimeout = null;
  
 // --- MIDDLEWARES STATIQUES ET JSON ---
 // Doit être AVANT les routes GET pour les pages HTML pour servir correctement CSS/JS.
