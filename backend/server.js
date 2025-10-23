@@ -321,6 +321,9 @@ async function analyzeTraffic(networkData) {
                 aiFeatures: aiResult.features
             };
 
+        // --- NOUVEAU : Ajout du timestamp à l'objet alertData ---
+        alertData.timestamp = Date.now();
+
             // --- Journalisation résiliente sur Hedera ---
             let logEntry = { ...alertData, id: `local-${Date.now()}` }; // ID local par défaut
             try {
