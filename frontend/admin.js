@@ -438,7 +438,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const menuMapping = {
         'menu-alerts': 'alert-section', 'menu-hcs': 'hcs-section',
         'menu-signatures': 'signatures-section', 'menu-rewards': 'rewards-section', 'menu-email': 'email-section',
-        'menu-map': 'map-section'
+        'menu-map': 'map-section', 'menu-counter-measures': 'counter-measures-section'
     };
 
     Object.keys(menuMapping).forEach(menuId => {

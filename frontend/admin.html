@@ -181,6 +181,10 @@
         .email-detail { font-size: 0.9rem; }
         .email-detail span { font-weight: 600; color: #b0c4ff; }
     </style>
+    <!-- Styles pour les contre-mesures -->
+    <style>
+        .counter-measure-item { display: flex; align-items: center; gap: 15px; padding: 15px; background: rgba(255, 51, 51, 0.1); border-radius: 8px; margin-bottom: 10px; border-left: 4px solid var(--danger); } .cm-icon { font-size: 1.2rem; color: var(--danger); } .cm-details { flex-grow: 1; } .cm-title { font-weight: 600; } .cm-target { font-family: 'Courier New', Courier, monospace; background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px; } .cm-reason { font-size: 0.9rem; color: var(--text-secondary); } .cm-time { font-size: 0.85rem; color: var(--text-secondary); }
+    </style>
 </head>
 <body>
     <div class="app-container">
@@ -238,6 +242,10 @@
                 <li class="menu-item" id="menu-map">
                     <i class="fas fa-map-marker-alt"></i>
                     <span>Cartographie</span>
+                </li>
+                <li class="menu-item" id="menu-counter-measures">
+                    <i class="fas fa-shield-virus"></i>
+                    <span>Contre-Mesures</span>
                 </li>
                 <li class="menu-item" id="menu-settings">
                     <i class="fas fa-cog"></i>
@@ -428,6 +436,15 @@
                 <h2><i class="fas fa-fingerprint"></i> Registre Public des Signatures de Menaces</h2>
                 <div class="hcs-log-list" id="signatures-log-list">
                     <div class="hcs-log-item"><p>Initialisation du registre des signatures...</p></div>
+                </div>
+            </div>
+
+            <div class="hcs-section" id="counter-measures-section" style="margin-top: 30px;">
+                <h2><i class="fas fa-shield-virus"></i> Journal des Contre-Mesures Actives</h2>
+                <div class="card">
+                    <div id="counter-measures-list" style="max-height: 400px; overflow-y: auto; padding-right: 10px;">
+                        <div class="placeholder" style="text-align: center; color: var(--text-secondary); padding: 20px;">En attente d'actions de réponse...</div>
+                    </div>
                 </div>
             </div>
 

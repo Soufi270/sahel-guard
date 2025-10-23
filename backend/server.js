@@ -137,6 +137,7 @@ const signatureLogHistory = [];
 const hcsLogHistory = [];
 const emailLogHistory = [];
 const rewardsLogHistory = [];
+const counterMeasuresLogHistory = [];
 
 
 // Initialisation de tous les services
@@ -442,6 +443,21 @@ async function analyzeTraffic(networkData) {
                 }, 500); // Exécuter rapidement après la détection
             }
         }
+        
+        // --- NOUVEAU : Logique de contre-mesure et d'envoi d'email combinée ---
+        let actionTaken = null;
+        if (finalDecision.isThreat && settings.activeResponseEnabled) {
+            actionTaken = activeResponseService.executeCounterMeasure(alertData, networkData);
+            if (actionTaken) {
+                counterMeasuresLogHistory.unshift(actionTaken);
+                if (counterMeasuresLogHistory.length > MAX_LOG_HISTORY) counterMeasuresLogHistory.pop();
+                io.emit('counter-measure-executed', actionTaken);
+            }
+        }
+
+        if (finalDecision.isThreat && emailService && settings.emailEnabled && alertData.severity !== 'low') {
+            sendEmailWithThrottling(alertData, actionTaken);
+        }
 
         return finalDecision; // Retourne la décision pour la simulation
 
@@ -449,6 +465,35 @@ async function analyzeTraffic(networkData) {
         console.error('Erreur analyse:', error);
         // Si c'est un appel HTTP, on renvoie une erreur. Sinon, l'erreur est déjà loggée.
         throw error;
+    }
+}
+
+function sendEmailWithThrottling(alertData, actionTaken) {
+    const recipientEmails = settings.alertEmails || [];
+    if (recipientEmails.length === 0) {
+        console.warn('⚠️ Email activé mais aucune adresse de destinataire configurée.');
+        return;
+    }
+
+    const now = Date.now();
+    const cooldown = (settings.emailDigestMinutes || 15) * 60 * 1000;
+
+    if (now - lastEmailSentTime > cooldown) {
+        console.log(`📧 Envoi d'un email d'alerte. Prochain envoi possible dans ${settings.emailDigestMinutes || 15} minutes.`);
+        lastEmailSentTime = now;
+
+        // Passez `actionTaken` au service d'email
+        emailService.sendAlertEmail(alertData, recipientEmails, actionTaken)
+            .then(emailResults => {
+                console.log(`📧 Emails envoyés: ${emailResults.filter(r => r.success).length}/${emailResults.length}`);
+                const emailLogEntry = { alertData, emailResults, actionTaken };
+                emailLogHistory.unshift(emailLogEntry);
+                if (emailLogHistory.length > MAX_LOG_HISTORY) emailLogHistory.pop();
+                io.emit('email-sent', emailLogEntry);
+            })
+            .catch(err => console.error('❌ Erreur envoi email:', err));
+    } else {
+        console.log(`🚫 Email non envoyé. Respect de la temporisation de ${settings.emailDigestMinutes || 15} minutes.`);
     }
 }
 
@@ -557,6 +602,9 @@ io.on('connection', (socket) => {
 
     // Envoyer l'historique des récompenses
     socket.emit('rewards-log-history', rewardsLogHistory);
+
+    // Envoyer l'historique des contre-mesures
+    socket.emit('counter-measures-log-history', counterMeasuresLogHistory);
 
     // Envoyer l'état initial des réputations
     socket.emit('reputations-init', reputationService.getAllReputations());
