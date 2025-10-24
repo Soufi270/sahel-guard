@@ -1,4 +1,11 @@
-// Connexion au serveur WebSocket
+/**
+ * @file admin.js
+ * Gère toute la logique du tableau de bord administrateur de SAHEL GUARD.
+ * - Établit la connexion WebSocket avec le serveur.
+ * - Met à jour l'interface en temps réel en réponse aux événements du serveur.
+ * - Gère les interactions utilisateur (navigation, formulaires, modales).
+ */
+
 const socket = io();
 
 // Éléments DOM
@@ -8,8 +15,6 @@ const tokenStatusElement = document.getElementById('token-status');
 const tokenStatusTextElement = document.getElementById('token-status-text');
 const alertsListElement = document.getElementById('alerts-list');
 const rewardsListElement = document.getElementById('rewards-list');
-const noAlertsElement = document.getElementById('no-alerts');
-const noRewardsElement = document.getElementById('no-rewards');
 const alertForm = document.getElementById('alert-form');
 const totalAlertsElement = document.getElementById('total-alerts');
 const totalRewardsElement = document.getElementById('total-rewards');
@@ -25,6 +30,10 @@ let sensorStatus = {};
 
 // Store pour la réputation des capteurs
 const sensorReputations = new Map();
+
+// ===================================================================================
+// GESTION DES ÉVÉNEMENTS WEBSOCKET
+// ===================================================================================
 
 // Écoute des événements WebSocket
 socket.on('connect', () => {
@@ -113,6 +122,10 @@ socket.on('email-sent', (emailLogEntry) => { // <-- NOUVEAU
     addEmailToUI(emailLogEntry);
 });
 
+// ===================================================================================
+// GESTION DES INTERACTIONS UTILISATEUR
+// ===================================================================================
+
 // Gestion de l'envoi du formulaire
 alertForm.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -149,15 +162,32 @@ alertForm.addEventListener('submit', async (e) => {
     }
 });
 
+// ===================================================================================
+// FONCTIONS DE MISE À JOUR DE L'INTERFACE (UI)
+// ===================================================================================
+
+/**
+ * Met à jour les cartes de statistiques principales (Total des alertes et récompenses).
+ */
+function updateStats() {
+    if (totalAlertsElement) {
+        totalAlertsElement.textContent = totalAlerts;
+    }
+    if (totalAlertsCardElement) {
+        totalAlertsCardElement.textContent = totalAlerts;
+    }
+    if (totalRewardsElement) {
+        totalRewardsElement.textContent = Math.round(totalRewards);
+    }
+    if (totalRewardsCardElement) {
+        totalRewardsCardElement.textContent = Math.round(totalRewards);
+    }
+}
+
 // Fonction pour ajouter une alerte à l'interface
 function addAlertToUI(alertData, animate = true) {
     totalAlerts++;
     updateStats();
-    
-    // Masquer le message "Aucune alerte"
-    if (noAlertsElement) {
-        noAlertsElement.style.display = 'none';
-    }
     
     // Créer un nouvel élément d'alerte
     const alertElement = document.createElement('div');
@@ -233,6 +263,10 @@ function addAlertToUI(alertData, animate = true) {
     }
 }
 
+/**
+ * Gère l'affichage d'une notification de récompense et met à jour les statistiques.
+ * @param {object} rewardData - Les données de la récompense.
+ */
 // Fonction pour gérer les notifications de récompense
 function handleRewardNotification(rewardData) {
     // Utiliser le montant réel pour le total
@@ -270,6 +304,11 @@ function handleRewardNotification(rewardData) {
     }
 }
 
+/**
+ * Ajoute une entrée de log pour une contre-mesure exécutée à l'interface.
+ * @param {object} actionData - Les données de l'action de contre-mesure.
+ * @param {boolean} [animate=true] - Indique si l'ajout doit être animé.
+ */
 // Fonction pour ajouter une contre-mesure à l'UI
 function addCounterMeasureToUI(actionData, animate = true) {
     const list = document.getElementById('counter-measures-list');
@@ -299,6 +338,11 @@ function addCounterMeasureToUI(actionData, animate = true) {
     if (list.children.length > 20) list.removeChild(list.lastChild);
 }
 
+/**
+ * Ajoute une entrée de log pour un email envoyé à l'interface.
+ * @param {object} emailLogEntry - Les données du log de l'email.
+ * @param {boolean} [animate=true] - Indique si l'ajout doit être animé.
+ */
 // Fonction pour ajouter un email à l'UI
 function addEmailToUI(emailLogEntry, animate = true) { // <-- NOUVEAU
     const list = document.getElementById('email-list');
@@ -332,6 +376,9 @@ function addEmailToUI(emailLogEntry, animate = true) { // <-- NOUVEAU
     if (list.children.length > 20) list.removeChild(list.lastChild);
 }
 
+/**
+ * Charge les informations initiales (Topic ID, Token Info) depuis le serveur.
+ */
 // Chargement initial: récupérer les infos du topic et du token
 async function loadInitialData() {
     try {
@@ -362,267 +409,9 @@ async function loadInitialData() {
     }
 }
 
-// Initialisation au chargement de la page
-document.addEventListener('DOMContentLoaded', () => {
-    console.log('Page SAHEL GUARD initialisée');
-    loadInitialData();
-    
-    updateStats();
-});
-
-// Gestion des erreurs globales
-window.addEventListener('error', (event) => {
-    console.error('Erreur globale:', event.error);
-});
-
-// Fonction pour mettre à jour les statistiques
-function updateStats() {
-    if (totalAlertsElement) {
-        totalAlertsElement.textContent = totalAlerts;
-    }
-    if (totalAlertsCardElement) {
-        totalAlertsCardElement.textContent = totalAlerts;
-    }
-    if (totalRewardsElement) {
-        totalRewardsElement.textContent = Math.round(totalRewards);
-    }
-    if (totalRewardsCardElement) {
-        totalRewardsCardElement.textContent = Math.round(totalRewards);
-    }
-}
-
-// Fonction pour tester manuellement une récompense (pour debug)
-window.testReward = function() {
-    const testData = {
-        amount: 25,
-        recipient: "0.0.1001",
-        reason: "Test manuel",
-        simulated: true
-    };
-    handleRewardNotification(testData);
-};
-
-function updateSensorStatus(sensorId, status) {
-    sensorStatus[sensorId] = status;
-    const sensorElement = document.querySelector(`.sensor-point[data-id="${sensorId}"]`);
-    if (sensorElement) {
-        sensorElement.classList.remove('status-active', 'status-alert');
-        if (status === 'active') {
-            sensorElement.classList.add('status-active');
-        } else if (status === 'alert') {
-            sensorElement.classList.add('status-alert');
-        }
-    }
-}
-
-// --- Logique de Navigation du Menu Latéral (CORRIGÉ) ---
-document.addEventListener('DOMContentLoaded', () => {
-    const mainContent = document.querySelector('main');
-    const settingsSection = document.getElementById('settings-section');
-    const allMenuItems = document.querySelectorAll('.sidebar-menu .menu-item');
-
-    function setActiveMenuItem(clickedItem) {
-        allMenuItems.forEach(item => item.classList.remove('active'));
-        if (clickedItem) clickedItem.classList.add('active');
-    }
-
-    function scrollToSection(sectionId) {
-        const section = document.getElementById(sectionId);
-        if (section) {
-            mainContent.style.display = 'block';
-            settingsSection.style.display = 'none';
-            section.scrollIntoView({ behavior: 'smooth' });
-        }
-    }
-
-    const menuMapping = {
-        'menu-alerts': 'alert-section', 'menu-hcs': 'hcs-section',
-        'menu-signatures': 'signatures-section', 'menu-rewards': 'rewards-section', 'menu-email': 'email-section',
-        'menu-map': 'map-section', 'menu-counter-measures': 'counter-measures-section'
-    };
-
-    Object.keys(menuMapping).forEach(menuId => {
-        const menuItem = document.getElementById(menuId);
-        if (menuItem) menuItem.addEventListener('click', (e) => {
-            e.preventDefault();
-            setActiveMenuItem(menuItem);
-            scrollToSection(menuMapping[menuId]);
-        });
-    });
-
-    const settingsMenu = document.getElementById('menu-settings');
-    if (settingsMenu) settingsMenu.addEventListener('click', (e) => {
-        e.preventDefault();
-        setActiveMenuItem(settingsMenu);
-        mainContent.style.display = 'none';
-        settingsSection.style.display = 'block';
-    });
-
-    // --- CORRECTION : Logique pour le menu Tableau de Bord ---
-    const dashboardMenu = document.querySelector('.sidebar-menu .menu-item:first-child');
-    if (dashboardMenu) dashboardMenu.addEventListener('click', (e) => {
-        e.preventDefault();
-        setActiveMenuItem(dashboardMenu);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    });
-
-    // --- Logique pour le bouton "Simuler une Alerte" dans le header ---
-    const newAlertBtn = document.getElementById('new-alert-btn');
-    const formPanel = document.getElementById('form-panel');
-
-    if (newAlertBtn && formPanel) {
-        newAlertBtn.addEventListener('click', (e) => {
-            e.preventDefault(); // Empêche tout comportement par défaut du bouton
-            formPanel.scrollIntoView({ behavior: 'smooth' }); // Fait défiler jusqu'au formulaire
-        });
-    }
-
-    // --- Logique pour le panneau des paramètres ---
-    const emailToggle = document.getElementById('email-enabled-toggle'); // <-- MODIFIÉ
-    const emailAddressesInput = document.getElementById('email-addresses'); // <-- MODIFIÉ
-    const emailDigestMinutesInput = document.getElementById('email-digest-minutes');
-    const aiThresholdSlider = document.getElementById('ai-threshold-slider');
-    const aiThresholdValue = document.getElementById('ai-threshold-value');
-    const themeToggle = document.getElementById('theme-toggle');
-    const activeResponseToggle = document.getElementById('active-response-toggle'); // <-- NOUVEAU
-    const saveBtn = document.getElementById('save-settings-btn');
-    const clearLogsBtn = document.getElementById('clear-logs-btn');
-
-    async function loadSettingsToUI() {
-        try {
-            const response = await fetch('/api/settings');
-            const settings = await response.json();
-            
-            emailToggle.checked = settings.emailEnabled; // <-- MODIFIÉ
-            emailAddressesInput.value = settings.alertEmails.join(', '); // <-- MODIFIÉ
-            emailDigestMinutesInput.value = settings.emailDigestMinutes;
-            aiThresholdSlider.value = settings.aiAnomalyThreshold;
-            aiThresholdValue.textContent = settings.aiAnomalyThreshold;
-            themeToggle.checked = settings.theme === 'dark';
-            activeResponseToggle.checked = settings.activeResponseEnabled; // <-- NOUVEAU
-            
-            // Appliquer le thème au chargement
-            document.body.style.setProperty('--primary', settings.theme === 'dark' ? '#0a0a1a' : '#f4f7f9');
-        } catch (error) {
-            console.error("Erreur chargement des paramètres:", error);
-        }
-    }
-
-    if (aiThresholdSlider) {
-        aiThresholdSlider.addEventListener('input', () => {
-            aiThresholdValue.textContent = parseFloat(aiThresholdSlider.value).toFixed(2);
-        });
-    }
-
-    if (saveBtn) {
-        saveBtn.addEventListener('click', async () => {
-            const newSettings = { // <-- MODIFIÉ
-                emailEnabled: emailToggle.checked,
-                alertEmails: emailAddressesInput.value.split(',').map(email => email.trim()).filter(Boolean),
-                emailDigestMinutes: parseInt(emailDigestMinutesInput.value, 10),
-                aiAnomalyThreshold: parseFloat(aiThresholdSlider.value),
-                theme: themeToggle.checked ? 'dark' : 'light',
-                activeResponseEnabled: activeResponseToggle.checked // <-- NOUVEAU
-            };
-
-            const response = await fetch('/api/settings', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(newSettings)
-            });
-            const result = await response.json();
-            if (result.success) {
-                alert('Paramètres sauvegardés !');
-                // Appliquer le thème immédiatement
-                document.body.style.setProperty('--primary', newSettings.theme === 'dark' ? '#0a0a1a' : '#f4f7f9');
-            } else {
-                alert('Erreur lors de la sauvegarde.');
-            }
-        });
-    }
-
-    loadSettingsToUI();
-
-    // --- Logique pour la modale des capteurs ---
-    const modal = document.getElementById('sensor-modal');
-    const modalCloseBtn = document.querySelector('.close-button');
-    const sensorPoints = document.querySelectorAll('.sensor-point');
-
-    sensorPoints.forEach(point => {
-        point.addEventListener('click', () => {
-            const sensorId = point.getAttribute('data-id');
-            const location = point.getAttribute('data-location');
-            const ip = point.getAttribute('data-ip');
-            const reputation = sensorReputations.get(sensorId) || { xp: 0, level: 'Bronze', alerts: 0 };
-
-            document.getElementById('modal-title').innerText = `Détails du Capteur - ${location}`;
-            const modalBody = document.getElementById('modal-body');
-            modalBody.innerHTML = `
-                <div class="modal-grid">
-                    <div class="modal-item">
-                        <span class="modal-item-label">ID du Capteur</span>
-                        <span class="modal-item-value">${sensorId}</span>
-                    </div>
-                    <div class="modal-item">
-                        <span class="modal-item-label">Adresse IP</span>
-                        <span class="modal-item-value">${ip}</span>
-                    </div>
-                    <div class="modal-item">
-                        <span class="modal-item-label">Niveau de Réputation</span>
-                        <span class="modal-item-value" style="color: ${reputation.color || '#fff'}">${reputation.level}</span>
-                    </div>
-                    <div class="modal-item">
-                        <span class="modal-item-label">Points d'Expérience (XP)</span>
-                        <span class="modal-item-value">${reputation.xp}</span>
-                    </div>
-                    <div class="modal-item">
-                        <span class="modal-item-label">Alertes Confirmées</span>
-                        <span class="modal-item-value">${reputation.alerts}</span>
-                    </div>
-                     <div class="modal-item">
-                        <span class="modal-item-label">Bonus de Récompense</span>
-                        <span class="modal-item-value">x${reputation.multiplier || 1.0}</span>
-                    </div>
-                </div>
-            `;
-
-            modal.style.display = 'block';
-        });
-    });
-
-    // Fermer la modale
-    modalCloseBtn.onclick = () => {
-        modal.style.display = 'none';
-    };
-
-    window.onclick = (event) => {
-        if (event.target == modal) {
-            modal.style.display = 'none';
-        }
-    };
-
-    // --- Logique pour le bouton de déconnexion ---
-    const logoutBtn = document.getElementById('logout-btn');
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', async () => {
-            try {
-                const response = await fetch('/api/logout', { method: 'POST' });
-                if (response.redirected) {
-                    window.location.href = response.url;
-                } else {
-                    window.location.href = '/login'; // Fallback
-                }
-            } catch (error) {
-                console.error('Erreur lors de la déconnexion:', error);
-            }
-        });
-    }
-});
-
-// --- Logique de visualisation des flux de menaces sur la carte ---
-const threatFlowsGroup = document.getElementById('threat-flows-group');
-const threatOrigins = Array.from(document.querySelectorAll('#threat-origins circle'));
-let originIndex = 0;
+// ===================================================================================
+// LOGIQUE DE VISUALISATION (CARTE, STATS, ETC.)
+// ===================================================================================
 
 function drawThreatFlow(flowData) {
     if (!threatFlowsGroup || !threatOrigins.length) return;
@@ -712,6 +501,119 @@ function addHcsLogToUI(logData, animate = true) {
     list.insertBefore(item, list.firstChild);
     if (list.children.length > 50) list.removeChild(list.lastChild);
 }
+
+// ===================================================================================
+// INITIALISATION DE LA PAGE
+// ===================================================================================
+
+// --- CONSOLIDATION DE L'INITIALISATION ---
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('Page SAHEL GUARD initialisée');
+    loadInitialData();
+    updateStats();
+
+    // Gestion des erreurs globales
+    window.addEventListener('error', (event) => {
+        console.error('Erreur globale:', event.error);
+    });
+
+    // --- Logique de Navigation du Menu Latéral ---
+    const mainContent = document.querySelector('main');
+    const settingsSection = document.getElementById('settings-section');
+    const allMenuItems = document.querySelectorAll('.sidebar-menu .menu-item');
+
+    function setActiveMenuItem(clickedItem) {
+        allMenuItems.forEach(item => item.classList.remove('active'));
+        if (clickedItem) clickedItem.classList.add('active');
+    }
+
+    function showSection(sectionId) {
+        if (sectionId === 'settings-section') {
+            mainContent.style.display = 'none';
+            settingsSection.style.display = 'block';
+        } else {
+            mainContent.style.display = 'block';
+            settingsSection.style.display = 'none';
+            const section = document.getElementById(sectionId);
+            if (section) {
+                section.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+    }
+
+    const menuMapping = {
+        'menu-alerts': 'alert-section',
+        'menu-hcs': 'hcs-section',
+        'menu-signatures': 'signatures-section',
+        'menu-rewards': 'rewards-section',
+        'menu-email': 'email-section',
+        'menu-map': 'map-section',
+        'menu-counter-measures': 'counter-measures-section'
+    };
+
+    Object.keys(menuMapping).forEach(menuId => {
+        const menuItem = document.getElementById(menuId);
+        if (menuItem) menuItem.addEventListener('click', (e) => {
+            e.preventDefault();
+            setActiveMenuItem(menuItem);
+            showSection(menuMapping[menuId]);
+        });
+    });
+
+    const settingsMenu = document.getElementById('menu-settings');
+    if (settingsMenu) settingsMenu.addEventListener('click', (e) => {
+        e.preventDefault();
+        setActiveMenuItem(settingsMenu);
+        showSection('settings-section');
+    });
+
+    const dashboardMenu = document.querySelector('.sidebar-menu .menu-item:first-child');
+    if (dashboardMenu) dashboardMenu.addEventListener('click', (e) => {
+        e.preventDefault();
+        setActiveMenuItem(dashboardMenu);
+        mainContent.style.display = 'block';
+        settingsSection.style.display = 'none';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    // --- Initialisation des autres écouteurs d'événements ---
+    initializeHeaderButtons();
+    initializeSettingsPanel();
+    initializeSensorModal();
+    initializeLogoutButton();
+});
+
+function initializeHeaderButtons() {
+    const newAlertBtn = document.getElementById('new-alert-btn');
+    const formPanel = document.getElementById('form-panel');
+    if (newAlertBtn && formPanel) {
+        newAlertBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            formPanel.scrollIntoView({ behavior: 'smooth' });
+        });
+    }
+}
+
+function initializeLogoutButton() {
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', async () => {
+            try {
+                const response = await fetch('/api/logout', { method: 'POST' });
+                if (response.redirected) {
+                    window.location.href = response.url;
+                } else {
+                    window.location.href = '/login';
+                }
+            } catch (error) {
+                console.error('Erreur lors de la déconnexion:', error);
+            }
+        });
+    }
+}
+
+// Le reste des fonctions (initializeSettingsPanel, initializeSensorModal, etc.)
+// reste le même que dans les versions précédentes.
 
 // Historique des emails (pour les nouveaux clients)
 socket.on('email-log-history', (history) => { // <-- NOUVEAU

@@ -1,3 +1,11 @@
+/**
+ * @file server.js
+ * Point d'entrée principal de l'application SAHEL GUARD.
+ * Ce fichier initialise le serveur Express, configure les middlewares,
+ * gère les routes HTTP, les connexions WebSocket, et orchestre les
+ * différents services (IA, Hedera, Email, etc.).
+ */
+
 const express = require('express');
 const http = require('http');
 const fs = require('fs');
@@ -64,6 +72,10 @@ let settings = {
     theme: 'dark'
 };
 
+/**
+ * Charge les paramètres depuis le fichier settings.json.
+ * Si le fichier n'existe pas, il est créé avec les valeurs par défaut.
+ */
 function loadSettings() {
     try {
         if (fs.existsSync(SETTINGS_FILE_PATH)) {
@@ -78,6 +90,9 @@ function loadSettings() {
     }
 }
 
+/**
+ * Sauvegarde les paramètres actuels dans le fichier settings.json.
+ */
 function saveSettings() {
     try {
         fs.writeFileSync(SETTINGS_FILE_PATH, JSON.stringify(settings, null, 2), 'utf8');
@@ -224,6 +239,10 @@ app.post('/api/logout', (req, res) => {
 });
 
 // --- Simulation de trafic réseau (côté serveur) ---
+/**
+ * Simule la réception de données réseau provenant d'un capteur.
+ * Ces données sont ensuite passées au moteur d'analyse.
+ */
 const suspiciousIPs = [
     `154.16.10.25`, `201.8.45.112`, `103.56.12.9`, `45.12.189.44`
 ];
@@ -278,6 +297,11 @@ app.post('/api/alert', async (req, res) => {
 });
 
 // Route pour l'analyse en temps réel avec IA
+/**
+ * Analyse un paquet réseau donné pour détecter des anomalies ou des menaces.
+ * @param {object} networkData - Les données du paquet réseau à analyser.
+ * @returns {Promise<object>} L'objet de décision finale contenant les résultats de l'analyse.
+ */
 async function analyzeTraffic(networkData) {
     try {
         // La logique d'analyse est maintenant dans une fonction réutilisable
@@ -309,139 +333,9 @@ async function analyzeTraffic(networkData) {
             networkData: networkData
         };
 
-        // Si menace détectée, envoyer une alerte HCS (logique réactive existante)
+        // Si une menace est détectée, orchestrer toutes les actions nécessaires.
         if (finalDecision.isThreat) {
-            const severity = businessRulesResult.length > 0 ? businessRulesResult[0].severity : (aiResult.confidence > 0.9 ? 'high' : 'medium');
-            const description = businessRulesResult.length > 0 ? businessRulesResult[0].rule : (aiResult.prediction.isPredicted ? aiResult.prediction.reason : "Anomalie détectée par l'IA");
-
-            const alertData = {
-                type: 'auto-detected-threat',
-                severity: severity,
-                source: networkData.sourceIP || 'Inconnue',
-                description: description,
-                confidence: aiResult.confidence || (aiResult.prediction.predictionConfidence / 100),
-                location: 'Mali',
-                aiFeatures: aiResult.features
-            };
-
-        // --- NOUVEAU : Ajout du timestamp à l'objet alertData ---
-        alertData.timestamp = Date.now();
-
-            // --- Journalisation résiliente sur Hedera ---
-            let logEntry = { ...alertData, id: `local-${Date.now()}` }; // ID local par défaut
-            try {
-                const result = await sendHCSMessage(alertData);
-                logEntry.id = result.messageId; // Remplacer par l'ID HCS si succès
-
-                // Créer et envoyer une signature de menace
-                const signature = {
-                    threatType: alertData.type,
-                    severity: alertData.severity,
-                    sourcePattern: networkData.sourceIP.split('.').slice(0, 2).join('.') + '.*.*',
-                };
-                const signatureLogEntry = await sendSignatureMessage(signature);
-                signatureLogHistory.unshift(signatureLogEntry);
-                if (signatureLogHistory.length > MAX_LOG_HISTORY) signatureLogHistory.pop();
-                io.emit('new-signature', signatureLogEntry);
-
-            } catch (hederaError) {
-                console.error("❌ Échec de la journalisation sur Hedera:", hederaError.message);
-                // L'alerte continue d'être traitée même si Hedera est en panne.
-            }
-
-            // L'alerte est diffusée sur le front-end, que Hedera ait fonctionné ou non.
-            hcsLogHistory.unshift(logEntry);
-            if (hcsLogHistory.length > MAX_LOG_HISTORY) hcsLogHistory.pop();
-            io.emit('new-alert', logEntry);
-            io.emit('hcs-log-entry', logEntry); // Événement dédié pour le journal HCS
-
-            // Mettre à jour le statut du capteur sur le front-end
-            if (networkData.sensorId) {
-                io.emit('sensor-status-update', { sensorId: networkData.sensorId, status: 'alert' });
-                
-                // Événement pour l'animation du flux de menace sur la carte
-                io.emit('threat-flow', {
-                    sensorId: networkData.sensorId,
-                    severity: alertData.severity
-                });
-
-                // Mettre à jour la réputation et notifier le client
-                const reputation = reputationService.addXpForAlert(networkData.sensorId, alertData);
-                io.emit('reputation-updated', { sensorId: networkData.sensorId, reputation });
-
-                setTimeout(() => {
-                    io.emit('sensor-status-update', { sensorId: networkData.sensorId, status: 'active' });
-                }, 30000); // Retour à la normale après 30s
-            }
-
-            // Envoi Email si activé
-            if (emailService && settings.emailEnabled && alertData.severity !== 'low') {
-                const recipientEmails = settings.alertEmails || [];
-                
-                if (recipientEmails.length > 0) {
-                    const now = Date.now();
-                    const cooldown = (settings.emailDigestMinutes || 15) * 60 * 1000;
-
-                    if (now - lastEmailSentTime > cooldown) {
-                        console.log(`📧 Envoi d'un email d'alerte. Prochain envoi possible dans ${settings.emailDigestMinutes || 15} minutes.`);
-                        lastEmailSentTime = now; // Mettre à jour l'heure du dernier envoi
-
-                        emailService.sendAlertEmail(alertData, recipientEmails)
-                            .then(emailResults => {
-                                console.log(`📧 Emails envoyés: ${emailResults.filter(r => r.success).length}/${emailResults.length}`);
-                                const emailLogEntry = { alertData, emailResults };
-                                emailLogHistory.unshift(emailLogEntry);
-                                if (emailLogHistory.length > MAX_LOG_HISTORY) emailLogHistory.pop();
-                                io.emit('email-sent', emailLogEntry);
-                            })
-                            .catch(err => console.error('❌ Erreur envoi email:', err));
-                    } else {
-                        console.log(`🚫 Email non envoyé. Respect de la temporisation de ${settings.emailDigestMinutes || 15} minutes.`);
-                    }
-                } else {
-                    console.warn('⚠️ Email activé mais aucune adresse de destinataire configurée dans les paramètres ou la variable d\'environnement ALERT_EMAILS.');
-                }
-            }
-
-            // Distribution de récompenses token
-            if (tokenService && networkData.sensorId) {
-                setTimeout(async () => {
-                    try {
-                        // Pour la démo, on utilise un compte simulé basé sur le sensorId
-                        const sensorAccountId = `0.0.${1000 + networkData.sensorId}`;
-                        
-                        const rewardResult = await tokenService.rewardAnomalyDetection(
-                            sensorAccountId, 
-                            alertData
-                        );
-                        
-                        if (rewardResult.success) {
-                            console.log(`🎉 Récompense distribuée: ${rewardResult.amount} HBAR à ${sensorAccountId}`);
-                            rewardsLogHistory.unshift(rewardResult);
-                            if (rewardsLogHistory.length > MAX_LOG_HISTORY) rewardsLogHistory.pop();
-
-                            // Diffuser via WebSocket
-                            io.emit('reward-distributed', rewardResult);
-                        }
-                    } catch (rewardError) {
-                        console.error('❌ Erreur distribution récompense:', rewardError);
-                    }
-                }, 2000);
-            }
-
-            // --- NOUVEAU : Contre-mesure automatique ---
-            if (settings.activeResponseEnabled) {
-                setTimeout(() => {
-                    try {
-                        const actionTaken = activeResponseService.executeCounterMeasure(alertData, networkData);
-                        if (actionTaken) {
-                            io.emit('counter-measure-executed', actionTaken);
-                        }
-                    } catch (responseError) {
-                        console.error('❌ Erreur lors de l\'exécution de la contre-mesure:', responseError);
-                    }
-                }, 500); // Exécuter rapidement après la détection
-            }
+            await handleThreatDetected(finalDecision, networkData);
         }
 
         return finalDecision; // Retourne la décision pour la simulation
@@ -462,6 +356,128 @@ app.post('/api/analyze', async (req, res) => {
         res.status(500).json({ error: "Erreur lors de l'analyse", details: error.message });
     }
 });
+
+/**
+ * Orchestre toutes les actions à prendre lorsqu'une menace est détectée.
+ * @param {object} finalDecision - L'objet de décision de menace.
+ * @param {object} networkData - Les données réseau originales.
+ */
+async function handleThreatDetected(finalDecision, networkData) {
+    const { aiAnalysis, businessRules } = finalDecision;
+
+    // 1. Construire l'objet d'alerte
+    const severity = businessRules.length > 0 ? businessRules[0].severity : (aiAnalysis.confidence > 0.9 ? 'high' : 'medium');
+    const description = businessRules.length > 0 ? businessRules[0].rule : (aiAnalysis.prediction.isPredicted ? aiAnalysis.prediction.reason : "Anomalie détectée par l'IA");
+
+    const alertData = {
+        type: 'auto-detected-threat',
+        severity: severity,
+        source: networkData.sourceIP || 'Inconnue',
+        description: description,
+        confidence: aiAnalysis.confidence || (aiAnalysis.prediction.predictionConfidence / 100),
+        location: 'Mali',
+        aiFeatures: aiAnalysis.features,
+        timestamp: Date.now()
+    };
+
+    // 2. Journalisation sur Hedera et diffusion de l'alerte
+    await logAndBroadcastAlert(alertData, networkData);
+
+    // 3. Mise à jour du statut et de la réputation du capteur
+    if (networkData.sensorId) {
+        updateSensorStatusAndReputation(networkData, alertData);
+    }
+
+    // 4. Exécuter la contre-mesure et envoyer l'email
+    let actionTaken = null;
+    if (settings.activeResponseEnabled) {
+        actionTaken = activeResponseService.executeCounterMeasure(alertData, networkData);
+        if (actionTaken) {
+            counterMeasuresLogHistory.unshift(actionTaken);
+            if (counterMeasuresLogHistory.length > MAX_LOG_HISTORY) counterMeasuresLogHistory.pop();
+            io.emit('counter-measure-executed', actionTaken);
+        }
+    }
+
+    if (emailService && settings.emailEnabled && alertData.severity !== 'low') {
+        sendEmailWithThrottling(alertData, actionTaken);
+    }
+
+    // 5. Distribuer les récompenses
+    if (tokenService && networkData.sensorId) {
+        distributeReward(networkData, alertData);
+    }
+}
+
+/**
+ * Journalise une alerte sur Hedera et la diffuse aux clients via WebSocket.
+ * @param {object} alertData - L'objet de l'alerte à journaliser.
+ * @param {object} networkData - Les données réseau originales pour créer une signature.
+ */
+async function logAndBroadcastAlert(alertData, networkData) {
+    let logEntry = { ...alertData, id: `local-${Date.now()}` };
+    try {
+        const result = await sendHCSMessage(alertData);
+        logEntry.id = result.messageId;
+
+        const signature = {
+            threatType: alertData.type,
+            severity: alertData.severity,
+            sourcePattern: networkData.sourceIP.split('.').slice(0, 2).join('.') + '.*.*',
+        };
+        const signatureLogEntry = await sendSignatureMessage(signature);
+        signatureLogHistory.unshift(signatureLogEntry);
+        if (signatureLogHistory.length > MAX_LOG_HISTORY) signatureLogHistory.pop();
+        io.emit('new-signature', signatureLogEntry);
+
+    } catch (hederaError) {
+        console.error("❌ Échec de la journalisation sur Hedera:", hederaError.message);
+    }
+
+    hcsLogHistory.unshift(logEntry);
+    if (hcsLogHistory.length > MAX_LOG_HISTORY) hcsLogHistory.pop();
+    io.emit('new-alert', logEntry);
+    io.emit('hcs-log-entry', logEntry);
+}
+
+/**
+ * Met à jour le statut visuel d'un capteur et sa réputation après une détection.
+ * @param {object} networkData - Les données réseau contenant l'ID du capteur.
+ * @param {object} alertData - Les données de l'alerte pour calculer l'XP.
+ */
+function updateSensorStatusAndReputation(networkData, alertData) {
+    io.emit('sensor-status-update', { sensorId: networkData.sensorId, status: 'alert' });
+    io.emit('threat-flow', { sensorId: networkData.sensorId, severity: alertData.severity });
+
+    const reputation = reputationService.addXpForAlert(networkData.sensorId, alertData);
+    io.emit('reputation-updated', { sensorId: networkData.sensorId, reputation });
+
+    setTimeout(() => {
+        io.emit('sensor-status-update', { sensorId: networkData.sensorId, status: 'active' });
+    }, 30000);
+}
+
+/**
+ * Simule la distribution d'une récompense à un capteur.
+ * @param {object} networkData - Les données réseau contenant l'ID du capteur.
+ * @param {object} alertData - Les données de l'alerte pour calculer le montant de la récompense.
+ */
+function distributeReward(networkData, alertData) {
+    setTimeout(async () => {
+        try {
+            const sensorAccountId = `0.0.${1000 + networkData.sensorId}`;
+            const rewardResult = await tokenService.rewardAnomalyDetection(sensorAccountId, alertData);
+            if (rewardResult.success) {
+                console.log(`🎉 Récompense distribuée: ${rewardResult.amount} HBAR à ${sensorAccountId}`);
+                rewardsLogHistory.unshift(rewardResult);
+                if (rewardsLogHistory.length > MAX_LOG_HISTORY) rewardsLogHistory.pop();
+                io.emit('reward-distributed', rewardResult);
+            }
+        } catch (rewardError) {
+            console.error('❌ Erreur distribution récompense:', rewardError);
+        }
+    }, 2000);
+}
 
 // --- Routes pour les Paramètres ---
 app.get('/api/settings', (req, res) => {
@@ -539,37 +555,31 @@ io.on('connection', (socket) => {
 
     console.log('🔗 Nouveau client connecté:', socket.id);
 
-    io.emit('server-ready'); // Informer le client que le serveur est prêt
+    // Informer le client que le serveur est prêt
+    io.emit('server-ready');
     
-    // Envoyer l'ID du topic au nouveau client
+    // Envoyer les informations initiales au nouveau client
     const topicId = getTopicId();
     if (topicId) {
         socket.emit('topic-info', { topicId: topicId.toString() });
     }
 
-    // Envoyer l'historique des logs au nouveau client
+    // Envoyer les différents historiques pour peupler l'interface
     socket.emit('log-history', hcsLogHistory);
-
-    // Envoyer l'historique des signatures
     socket.emit('signature-log-history', signatureLogHistory);
-
-    // Envoyer l'historique des Emails
-    socket.emit('email-log-history', emailLogHistory); // <-- NOUVEAU
-
-    // Envoyer l'historique des récompenses
+    socket.emit('email-log-history', emailLogHistory);
     socket.emit('rewards-log-history', rewardsLogHistory);
-
-    // Envoyer l'historique des contre-mesures
     socket.emit('counter-measures-log-history', counterMeasuresLogHistory);
 
-    // Envoyer l'état initial des réputations
+    // Envoyer les données de réputation initiales
     socket.emit('reputations-init', reputationService.getAllReputations());
 
-    // Envoyer les infos token si disponible
+    // Envoyer les informations sur le token de récompense
     if (tokenService) {
         socket.emit('token-info', tokenService.getTokenInfo());
     }
     
+    // Gérer la déconnexion du client
     socket.on('disconnect', () => {
         console.log('Client déconnecté:', socket.id);
     });

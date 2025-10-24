@@ -1,8 +1,9 @@
 /**
- * ai-detection-advanced.js
- * 
+ * @file ai-detection-advanced.js
  * Un service d'IA amélioré qui maintient un historique des paquets pour
- * non seulement détecter les menaces actuelles, mais aussi prédire les menaces imminentes.
+ * non seulement détecter les anomalies actuelles, mais aussi prédire des
+ * types de menaces spécifiques en se basant sur le comportement des flux réseau.
+ * Cette approche est dite "stateful" car elle conserve un état des communications.
  */
 
 const sourceIPFrequency = new Map();
@@ -13,6 +14,10 @@ const FLOW_TIMEOUT = 60000; // 1 minute
 // Stocke les informations sur les flux de communication (source IP -> dest IP:port)
 const activeFlows = new Map();
 
+/**
+ * Classe pour la détection d'anomalies et la prédiction de menaces.
+ * Maintient un historique des paquets et des flux pour une analyse comportementale.
+ */
 class AdvancedAnomalyDetector {
     constructor(anomalyThreshold = 0.9) {
         this.anomalyThreshold = anomalyThreshold;
@@ -20,6 +25,11 @@ class AdvancedAnomalyDetector {
         console.log(`🧠 IA Prédictive initialisée (Seuil: ${this.anomalyThreshold}, Historique: ${HISTORY_SIZE})`);
     }
 
+    /**
+     * Extrait les caractéristiques pertinentes d'un paquet réseau.
+     * @param {object} networkData - Les données brutes du paquet.
+     * @returns {object} Un objet de caractéristiques normalisées.
+     */
     extractFeatures(networkData) {
         const { sourceIP, destinationIP, destinationPort, protocol, packetSize } = networkData;
         
@@ -40,6 +50,11 @@ class AdvancedAnomalyDetector {
         };
     }
 
+    /**
+     * Analyse un paquet réseau, met à jour l'état des flux et prédit les menaces.
+     * @param {object} networkData - Les données du paquet à analyser.
+     * @returns {object} Un objet contenant la décision de menace, la confiance et les détails de la prédiction.
+     */
     analyzeAndPredict(networkData) {
         const features = this.extractFeatures(networkData);
 
@@ -49,7 +64,7 @@ class AdvancedAnomalyDetector {
             this.packetHistory.shift();
         }
 
-        // --- Gestion des flux ---
+        // Met à jour l'historique du flux de communication actuel
         const flowId = `${features.sourceIP}>${features.destinationIP}:${features.destinationPort}`;
         if (!activeFlows.has(flowId)) {
             activeFlows.set(flowId, {
@@ -65,7 +80,7 @@ class AdvancedAnomalyDetector {
         }
         flow.lastPacketTimestamp = features.timestamp;
 
-        // --- Détection de menace actuelle (logique améliorée) ---
+        // Détection d'anomalie simple basée sur les caractéristiques du paquet actuel
         let isThreat = false;
         let confidence = 0;
         let threatReason = [];
@@ -81,7 +96,7 @@ class AdvancedAnomalyDetector {
             threatReason.push("Source TCP très fréquente");
         }
 
-        // --- Logique de prédiction basée sur l'historique ---
+        // Logique de prédiction de menaces spécifiques basée sur le comportement du flux
         let prediction = {
             isPredicted: false,
             predictionConfidence: 0,
@@ -89,7 +104,7 @@ class AdvancedAnomalyDetector {
             reason: ''
         };
 
-        // --- Logique de prédiction basée sur les flux ---
+        // Analyse comportementale si le flux a suffisamment de paquets
         if (flow.packets.length > 5) {
             const packetsInFlow = flow.packets;
             const timeDiffs = [];
@@ -99,7 +114,7 @@ class AdvancedAnomalyDetector {
             const avgTimeDiff = timeDiffs.reduce((a, b) => a + b, 0) / timeDiffs.length;
             const timeStdDev = Math.sqrt(timeDiffs.map(x => Math.pow(x - avgTimeDiff, 2)).reduce((a, b) => a + b) / timeDiffs.length);
 
-            // Prédiction de Beaconing C2 (Malware) : paquets à intervalle régulier
+            // 1. Prédiction de Beaconing C2 (Malware) : paquets à intervalle régulier (faible écart-type)
             if (timeStdDev < 100 && avgTimeDiff > 500) { // Faible écart-type = régulier
                 flow.threatScore += 20;
                 prediction = {
@@ -110,7 +125,7 @@ class AdvancedAnomalyDetector {
                 };
             }
 
-            // Prédiction d'attaque par force brute : beaucoup de petits paquets vers un port connu
+            // 2. Prédiction d'attaque par force brute : beaucoup de petits paquets vers un port de service connu
             const smallPackets = packetsInFlow.filter(p => p.packetSize < 100).length;
             const knownPorts = [21, 22, 3389];
             if (packetsInFlow.length > 10 && smallPackets > 8 && knownPorts.includes(features.destinationPort)) {
@@ -123,7 +138,7 @@ class AdvancedAnomalyDetector {
                 };
             }
 
-            // Prédiction d'exfiltration de données : volume de données sortant élevé
+            // 3. Prédiction d'exfiltration de données : volume de données sortant anormalement élevé
             const totalSize = packetsInFlow.reduce((sum, p) => sum + p.packetSize, 0);
             if (totalSize > 50000) { // Seuil arbitraire de 50KB
                 flow.threatScore += 40;
@@ -136,7 +151,7 @@ class AdvancedAnomalyDetector {
             }
         }
 
-        // Nettoyer les anciens flux
+        // Nettoie les flux inactifs pour libérer la mémoire
         const now = Date.now();
         for (const [flowId, flowData] of activeFlows.entries()) {
             if (now - flowData.lastPacketTimestamp > FLOW_TIMEOUT) {
@@ -144,7 +159,7 @@ class AdvancedAnomalyDetector {
             }
         }
 
-        // Si le score de menace est élevé, on peut aussi déclencher une alerte
+        // Déclenche une alerte générique si le score de menace d'un flux est élevé
         if (flow.threatScore > 50 && !prediction.isPredicted) {
              prediction = {
                 isPredicted: true,
