@@ -2,7 +2,7 @@
  * active-response-service.js
  *
  * Gère les contre-mesures automatiques en réponse aux menaces détectées.
- 
+ */
 
 const blockedIPs = new Set();
 const reputationService = require('./sensor-reputation'); // Importer le service de réputation
@@ -33,7 +33,7 @@ class ActiveResponseService {
         const template = reasonTemplates[type] || reasonTemplates[severity] || `Menace de niveau '${severity}' détectée.`;
         
         return `${template} Description: ${description}`;
-    },
+    }
 
     /**
      * Exécute une contre-mesure basée sur les données de la menace.
