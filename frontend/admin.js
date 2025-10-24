@@ -612,8 +612,113 @@ function initializeLogoutButton() {
     }
 }
 
-// Le reste des fonctions (initializeSettingsPanel, initializeSensorModal, etc.)
-// reste le même que dans les versions précédentes.
+function initializeSettingsPanel() {
+    const emailToggle = document.getElementById('email-enabled-toggle');
+    const emailAddressesInput = document.getElementById('email-addresses');
+    const emailDigestMinutesInput = document.getElementById('email-digest-minutes');
+    const aiThresholdSlider = document.getElementById('ai-threshold-slider');
+    const aiThresholdValue = document.getElementById('ai-threshold-value');
+    const themeToggle = document.getElementById('theme-toggle');
+    const saveBtn = document.getElementById('save-settings-btn');
+    const clearLogsBtn = document.getElementById('clear-logs-btn');
+    // La variable activeResponseToggle n'est pas dans le HTML, donc je la commente pour éviter des erreurs.
+    // const activeResponseToggle = document.getElementById('active-response-toggle');
+
+    async function loadSettingsToUI() {
+        try {
+            const response = await fetch('/api/settings');
+            const settings = await response.json();
+            
+            emailToggle.checked = settings.emailEnabled;
+            emailAddressesInput.value = settings.alertEmails.join(', ');
+            emailDigestMinutesInput.value = settings.emailDigestMinutes;
+            aiThresholdSlider.value = settings.aiAnomalyThreshold;
+            aiThresholdValue.textContent = settings.aiAnomalyThreshold;
+            themeToggle.checked = settings.theme === 'dark';
+            // if (activeResponseToggle) activeResponseToggle.checked = settings.activeResponseEnabled;
+            
+            document.body.style.setProperty('--primary', settings.theme === 'dark' ? '#0a0a1a' : '#f4f7f9');
+        } catch (error) {
+            console.error("Erreur chargement des paramètres:", error);
+        }
+    }
+
+    if (aiThresholdSlider) {
+        aiThresholdSlider.addEventListener('input', () => {
+            aiThresholdValue.textContent = parseFloat(aiThresholdSlider.value).toFixed(2);
+        });
+    }
+
+    if (saveBtn) {
+        saveBtn.addEventListener('click', async () => {
+            const newSettings = {
+                emailEnabled: emailToggle.checked,
+                alertEmails: emailAddressesInput.value.split(',').map(email => email.trim()).filter(Boolean),
+                emailDigestMinutes: parseInt(emailDigestMinutesInput.value, 10),
+                aiAnomalyThreshold: parseFloat(aiThresholdSlider.value), // Correction ici
+                theme: themeToggle.checked ? 'dark' : 'light',
+                // activeResponseEnabled: activeResponseToggle.checked
+            };
+
+            const response = await fetch('/api/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newSettings)
+            });
+            const result = await response.json();
+            if (result.success) {
+                alert('Paramètres sauvegardés !');
+                document.body.style.setProperty('--primary', newSettings.theme === 'dark' ? '#0a0a1a' : '#f4f7f9');
+            } else {
+                alert('Erreur lors de la sauvegarde.');
+            }
+        });
+    }
+
+    loadSettingsToUI();
+}
+
+function initializeSensorModal() {
+    const modal = document.getElementById('sensor-modal');
+    const modalCloseBtn = document.querySelector('.close-button');
+    const sensorPoints = document.querySelectorAll('.sensor-point');
+
+    sensorPoints.forEach(point => {
+        point.addEventListener('click', () => {
+            const sensorId = point.getAttribute('data-id');
+            const location = point.getAttribute('data-location');
+            const ip = point.getAttribute('data-ip');
+            const reputation = sensorReputations.get(sensorId) || { xp: 0, level: 'Bronze', alerts: 0, multiplier: 1.0, color: '#cd7f32' };
+
+            document.getElementById('modal-title').innerText = `Détails du Capteur - ${location}`;
+            const modalBody = document.getElementById('modal-body');
+            modalBody.innerHTML = `
+                <div class="modal-grid">
+                    <div class="modal-item"><span class="modal-item-label">ID du Capteur</span><span class="modal-item-value">${sensorId}</span></div>
+                    <div class="modal-item"><span class="modal-item-label">Adresse IP</span><span class="modal-item-value">${ip}</span></div>
+                    <div class="modal-item"><span class="modal-item-label">Niveau de Réputation</span><span class="modal-item-value" style="color: ${reputation.color || '#fff'}">${reputation.level}</span></div>
+                    <div class="modal-item"><span class="modal-item-label">Points d'Expérience (XP)</span><span class="modal-item-value">${reputation.xp}</span></div>
+                    <div class="modal-item"><span class="modal-item-label">Alertes Confirmées</span><span class="modal-item-value">${reputation.alerts}</span></div>
+                    <div class="modal-item"><span class="modal-item-label">Bonus de Récompense</span><span class="modal-item-value">x${reputation.multiplier || 1.0}</span></div>
+                </div>
+            `;
+
+            modal.style.display = 'block';
+        });
+    });
+
+    if (modalCloseBtn) {
+        modalCloseBtn.onclick = () => {
+            modal.style.display = 'none';
+        };
+    }
+
+    window.onclick = (event) => {
+        if (event.target == modal) {
+            modal.style.display = 'none';
+        }
+    };
+}
 
 // Historique des emails (pour les nouveaux clients)
 socket.on('email-log-history', (history) => { // <-- NOUVEAU
