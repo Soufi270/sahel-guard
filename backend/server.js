@@ -453,35 +453,6 @@ async function analyzeTraffic(networkData) {
     }
 }
 
-function sendEmailWithThrottling(alertData, actionTaken) {
-    const recipientEmails = settings.alertEmails || [];
-    if (recipientEmails.length === 0) {
-        console.warn('⚠️ Email activé mais aucune adresse de destinataire configurée.');
-        return;
-    }
-
-    const now = Date.now();
-    const cooldown = (settings.emailDigestMinutes || 15) * 60 * 1000;
-
-    if (now - lastEmailSentTime > cooldown) {
-        console.log(`📧 Envoi d'un email d'alerte. Prochain envoi possible dans ${settings.emailDigestMinutes || 15} minutes.`);
-        lastEmailSentTime = now;
-
-        // Passez `actionTaken` au service d'email
-        emailService.sendAlertEmail(alertData, recipientEmails, actionTaken)
-            .then(emailResults => {
-                console.log(`📧 Emails envoyés: ${emailResults.filter(r => r.success).length}/${emailResults.length}`);
-                const emailLogEntry = { alertData, emailResults, actionTaken };
-                emailLogHistory.unshift(emailLogEntry);
-                if (emailLogHistory.length > MAX_LOG_HISTORY) emailLogHistory.pop();
-                io.emit('email-sent', emailLogEntry);
-            })
-            .catch(err => console.error('❌ Erreur envoi email:', err));
-    } else {
-        console.log(`🚫 Email non envoyé. Respect de la temporisation de ${settings.emailDigestMinutes || 15} minutes.`);
-    }
-}
-
 app.post('/api/analyze', async (req, res) => {
     try {
         const networkData = req.body;

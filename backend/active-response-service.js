@@ -41,7 +41,7 @@ class ActiveResponseService {
      * @param {object} networkData - Les données réseau originales.
      * @returns {object|null} Un objet décrivant l'action prise, ou null si aucune action.
      */
-    executeCounterMeasure(alertData, networkData) {
+    executeCounterMeasure(alertData, networkData) { // Correction: Pas de virgule ici
         // Décision : On n'agit que sur les menaces de sévérité 'high' ou 'critical'
         if (alertData.severity !== 'high' && alertData.severity !== 'critical') {
             console.log(`[Réponse Active] Menace de niveau '${alertData.severity}' ignorée, aucune action automatique.`);
