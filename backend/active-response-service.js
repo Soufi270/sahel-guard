@@ -2,8 +2,7 @@
  * active-response-service.js
  *
  * Gère les contre-mesures automatiques en réponse aux menaces détectées.
- * Pour le hackathon, ce service simule des actions comme le blocage d'IP.
- */
+ 
 
 const blockedIPs = new Set();
 const reputationService = require('./sensor-reputation'); // Importer le service de réputation

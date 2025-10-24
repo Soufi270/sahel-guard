@@ -443,21 +443,6 @@ async function analyzeTraffic(networkData) {
                 }, 500); // Exécuter rapidement après la détection
             }
         }
-        
-        // --- NOUVEAU : Logique de contre-mesure et d'envoi d'email combinée ---
-        let actionTaken = null;
-        if (finalDecision.isThreat && settings.activeResponseEnabled) {
-            actionTaken = activeResponseService.executeCounterMeasure(alertData, networkData);
-            if (actionTaken) {
-                counterMeasuresLogHistory.unshift(actionTaken);
-                if (counterMeasuresLogHistory.length > MAX_LOG_HISTORY) counterMeasuresLogHistory.pop();
-                io.emit('counter-measure-executed', actionTaken);
-            }
-        }
-
-        if (finalDecision.isThreat && emailService && settings.emailEnabled && alertData.severity !== 'low') {
-            sendEmailWithThrottling(alertData, actionTaken);
-        }
 
         return finalDecision; // Retourne la décision pour la simulation
 
