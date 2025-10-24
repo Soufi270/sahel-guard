@@ -33,7 +33,7 @@ class ActiveResponseService {
         const template = reasonTemplates[type] || reasonTemplates[severity] || `Menace de niveau '${severity}' détectée.`;
         
         return `${template} Description: ${description}`;
-    }
+    },
 
     /**
      * Exécute une contre-mesure basée sur les données de la menace.
