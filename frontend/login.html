@@ -185,11 +185,14 @@
                     body: JSON.stringify({ email, password })
                 });
 
-                if (response.ok) {
-                    window.location.href = '/admin';
+                const result = await response.json();
+
+                if (result.success) {
+                    // Si la connexion réussit (le serveur a renvoyé { success: true }), on redirige.
+                    window.location.href = '/admin'; 
                 } else {
-                    const data = await response.json();
-                    errorMessage.textContent = data.error || 'Erreur de connexion.';
+                    // Sinon, on affiche le message d'erreur renvoyé par le serveur.
+                    errorMessage.textContent = result.error || 'Erreur de connexion.';
                 }
             } catch (error) {
                 errorMessage.textContent = 'Une erreur réseau est survenue.';
